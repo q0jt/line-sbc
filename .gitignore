@@ -23,3 +23,6 @@ go.work
 .idea
 
 .DS_Store
+
+# Test Cert
+server-LNSGXTE1505.backup.security.linecorp.com.pem
