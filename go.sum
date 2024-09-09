@@ -1,0 +1,4 @@
+github.com/q0jt/crypto v0.1.0 h1:kbtFy7li+hTTg/oCB+QY3XT3VcwFdn2GkRp4pGpyR6g=
+github.com/q0jt/crypto v0.1.0/go.mod h1:Z1PMYSOR5nyMcyAVAIQSKCDwalqy85Aqn1x3Ws4L5DM=
+golang.org/x/sys v0.25.0 h1:r+8e+loiHxRqhXVl6ML1nO3l1+oFoWbnlu2Ehimmi34=
+golang.org/x/sys v0.25.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
