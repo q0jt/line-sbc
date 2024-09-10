@@ -33,7 +33,11 @@ func importRootSGXPubKeys(isRelease bool) (*ecdsa.PublicKey, error) {
 	if !isRelease {
 		name = "sgx-beta.backup.security.linecorp.com.pem"
 	}
-	path := filepath.Join("certs", name)
+	dir, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+	path := filepath.Join(dir, "certs", name)
 	cert, err := loadCertificate(path)
 	if err != nil {
 		return nil, err
