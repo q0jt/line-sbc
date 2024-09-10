@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/binary"
 	"errors"
+	"os"
 	"time"
 
 	"github.com/q0jt/line-sbc/sbc/internal/msgpack"
@@ -38,7 +39,11 @@ func createFromPin(mid, passcode, path string, timestamp int64) (*RestoreClaim, 
 	if !validatePasscode(passcode) {
 		return nil, errors.New("invalid passcode")
 	}
-	key, err := importSGXPubKeys(path, true)
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	key, err := importSGXPubKeys(b, true)
 	if err != nil {
 		return nil, err
 	}
