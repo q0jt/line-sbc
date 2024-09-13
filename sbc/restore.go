@@ -96,7 +96,7 @@ func makeRestoreClaim(mid, passcode string, timestamp int64, key *ecdsa.PublicKe
 		return nil, err
 	}
 
-	return newRestoreClaim(claim, ciphertext), nil
+	return newRestoreClaim(claim, rng), nil
 }
 
 func (c *RestoreClaim) Restore(key, payload []byte) error {
