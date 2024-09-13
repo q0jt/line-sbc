@@ -3,9 +3,7 @@ package msgpack
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/hex"
 	"errors"
-	"fmt"
 )
 
 type decoder struct {
@@ -139,11 +137,17 @@ func UnpackRecoveryKey(b []byte) ([]byte, error) {
 }
 
 type BlobPayload struct {
-	metaData []byte
-	payload  []byte
+	MetaData []int32
+	Payload  []byte
+
+	isMigration bool
 }
 
-func (d *decoder) unpackBlobPayload() ([]byte, error) {
+func (p *BlobPayload) IsMigration() bool {
+	return p.isMigration
+}
+
+func (d *decoder) unpackBlobPayload() (*BlobPayload, error) {
 	if d.unpackArray() != 3 {
 		return nil, errors.New("error: 1: unpackArray")
 	}
@@ -154,17 +158,58 @@ func (d *decoder) unpackBlobPayload() ([]byte, error) {
 	if objType != 1 {
 		return nil, errors.New("error: 2: unpackUint")
 	}
+
+	var payload BlobPayload
 	metaContainerSize := d.unpackArray()
+	keyIds := make([]int32, metaContainerSize)
+
 	for i := 0; i < metaContainerSize; i++ {
-		d.unpackArray()
-		fmt.Println(d.unpackUint())
-		fmt.Println(d.unpackInt32())
+		v := d.unpackArray()
+		d.unpackUint()
+		if v == 2 {
+			keyIds[i] = d.unpackInt32()
+		} else {
+			payload.isMigration = true
+		}
 	}
-	return d.unpackBin()
+
+	src, err := d.unpackBin()
+	if err != nil {
+		return nil, err
+	}
+
+	if payload.isMigration {
+		keyIds = keyIds[:len(keyIds)-1]
+	}
+
+	payload.MetaData = keyIds
+	payload.Payload = src
+
+	return &payload, nil
 }
 
-func UnpackBlobPayload(b []byte) {
+func (d *decoder) unpackEncryptSection() ([][]byte, error) {
+	size := d.unpackArray()
+	if size == 0 {
+		return nil, errors.New("error")
+	}
+	keys := make([][]byte, size)
+	for i := 0; i < size; i++ {
+		data, err := d.unpackBin()
+		if err != nil {
+			return nil, err
+		}
+		keys[i] = data
+	}
+	return keys, nil
+}
+
+func UnpackEncryptSection(b []byte) ([][]byte, error) {
 	decoder := newDecoder(b)
-	s, _ := decoder.unpackBlobPayload()
-	fmt.Println(hex.EncodeToString(s))
+	return decoder.unpackEncryptSection()
+}
+
+func UnpackBlobPayload(b []byte) (*BlobPayload, error) {
+	decoder := newDecoder(b)
+	return decoder.unpackBlobPayload()
 }

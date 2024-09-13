@@ -23,10 +23,6 @@ func NewKeyWrap(ck, seed []byte) *KeyWrap {
 	return &KeyWrap{certKey: ck, seed: seed}
 }
 
-func EncodeClaimWithKeyWarp(kw *KeyWrap, tempKey, pin []byte, timestamp int64) ([]byte, error) {
-	return EncodeClaim(kw, tempKey, pin, timestamp)
-}
-
 func EncodeClaim(kw *KeyWrap, tempKey, pin []byte, timestamp int64) ([]byte, error) {
 	e := newEncoder()
 	claim, err := e.packClaim(kw, tempKey, pin, timestamp)
@@ -34,6 +30,14 @@ func EncodeClaim(kw *KeyWrap, tempKey, pin []byte, timestamp int64) ([]byte, err
 		return nil, err
 	}
 	return claim, nil
+}
+
+func EncodeBlobPayloadMetaData(payload *BlobPayload) ([]byte, error) {
+	e := newEncoder()
+	if err := e.packBlobPayloadMetaData(payload); err != nil {
+		return nil, err
+	}
+	return e.buf.Bytes(), nil
 }
 
 func (e *encoder) packArraySize(size uint8) {
@@ -52,6 +56,14 @@ func (e *encoder) writeBin(b []byte) {
 		e.buf.Write(length)
 	}
 	e.buf.Write(b)
+}
+
+func (e *encoder) writeUint32(v uint32) error {
+	e.buf.WriteByte(0xce)
+	out := make([]byte, 4)
+	binary.BigEndian.PutUint32(out, v)
+	e.buf.Write(out)
+	return nil
 }
 
 func (e *encoder) packClaim(kw *KeyWrap, tempKey, pin []byte, timestamp int64) ([]byte, error) {
@@ -87,5 +99,26 @@ func (e *encoder) packKeyWrap(kw *KeyWrap) error {
 	e.writeBin(kw.certKey)
 	e.writeBin(kw.seed)
 
+	return nil
+}
+
+func (e *encoder) packBlobPayloadMetaData(payload *BlobPayload) error {
+	if payload == nil {
+		return errors.New("no BlobPayload")
+	}
+	keyIds := payload.MetaData
+	size := len(keyIds)
+	e.packArraySize(uint8(size))
+	for _, keyId := range keyIds {
+		e.packArraySize(2)
+		e.buf.WriteByte(0x01)
+		if err := e.writeUint32(uint32(keyId)); err != nil {
+			return err
+		}
+	}
+	if payload.IsMigration() {
+		e.packArraySize(1)
+		e.buf.WriteByte(2)
+	}
 	return nil
 }
