@@ -1,72 +1,41 @@
 # line-sbc
+This client is implemented based on reverse engineering of the LINE backup PIN.
 
-# Spec
-### RestoreClaim 
 
-```json
-[
-  2, // keyType: Backup PIN
-  0000000000000, // getServerTime()
-  "temporary ECDSA-P256 public key",
-  [
-    [
-      "backup certificate ECDSA-P256 public key", // getE2EEKeyBackupCertificates()
-      "encrypted seed"
-    ]
-  ],
-  "encrypted pin"
-]
+### Usage
+```
+go get -u github.com/q0jt/line-sbc
 ```
 
-- **field1**: uint, typeId(2), PIN
-- **field2**: uint, request time(getServerTime)
-- **field3**: bin, generate ECDSA-P256 public key
-- **field4**: bin, backup certificate ECDSA-P256 public key
-- **field5**: bin, encrypted seed
-- **field6**: bin, encrypted pin
-
-### Recovery Key
-
-```json
-[
-  1,
-  "encrypted key"
-]
+### How To Get Backup Cert
 ```
+E2EEKeyBackupService(/EKBS4)
 
-- **field1**: uint, objectType(1), LetterSealing Key
-- **field2**: bin, encrypted key
-
-### Blob Header
-
-```json
-[
-  2, // keyType: Backup PIN
-  0000000000000, // getServerTime()
-  "temporary ECDSA-P256 public key",
-  [
-    [
-      "backup certificate ECDSA-P256 public key", // getE2EEKeyBackupCertificates()
-      "encrypted seed"
-    ]
-  ],
-  "encrypted pin"
-]
-```
-- **field1**: uint, typeId(2), PIN
-- **field2**: uint, request time(getServerTime)
-- **field3**: bin, generate ECDSA-P256 public key
-- **field4**: bin, backup certificate ECDSA-P256 public key
-- **field5**: bin, encrypted seed
-- **field6**: bin, encrypted pin
-
-field5: 32 bytes
-
-### BlobPayload
-
-### Get Backup Cert
-
-```
 cert = getE2EEKeyBackupCertificates()
 GET https://obs.line-scdn.net/{cert}
 ```
+
+### Getting started
+<img width="350" src="./assets/images/backup_pin.png"/>
+
+```go
+claim, err := sbc.CreateFromPin("mid", "backup PIN", "cert path")
+if err != nil {
+	log.Fatal(err)
+}
+restore, err := RestoreE2EEKeyBackup(
+	&RestoreE2EEKeyBackupRequest{
+		RestoreClaim: claim.Claim(),
+	})
+keys, err := claim.Restore(restore.RecoveryKey, restore.BlobPayload)
+for _, backupKey := range keys {
+	fmt.Printf("keyID: %d\n", backupKey.KeyID)
+	fmt.Printf("private key: %s\n", backupKey.BackupKey.E2eePrivateKey)
+}
+```
+
+### Note
+```
+E2EEKeyBackupException({Code:INVALID_PIN Reason:invalid pin ParameterMap:map[failedAttemptCount:2 maxAttemptCount:10]})
+```
+When the number of failed attempts reaches 10, the system is permanently locked and the data containing the E2EE key cannot be accessed.
