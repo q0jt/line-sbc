@@ -7,8 +7,8 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 
-	"golang.org/x/crypto/argon2"
-	kdf "golang.org/x/crypto/hkdf"
+	"github.com/q0jt/crypto/argon2"
+	kdf "github.com/q0jt/crypto/hkdf"
 )
 
 func sha256Sum(b []byte) []byte {
