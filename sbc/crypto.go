@@ -66,7 +66,6 @@ func cryptoAesCTR(key, iv, src []byte) ([]byte, error) {
 	ciphertext := make([]byte, len(src))
 	stream := cipher.NewCTR(block, iv)
 	stream.XORKeyStream(ciphertext, src)
-
 	return ciphertext, nil
 }
 

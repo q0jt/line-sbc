@@ -43,7 +43,7 @@ func createFromPin(mid, passcode, path string, timestamp int64) (*RestoreClaim, 
 	if err != nil {
 		return nil, err
 	}
-	key, err := importSGXPubKeys(b, true)
+	key, err := importServiceCert(b, true)
 	if err != nil {
 		return nil, err
 	}
@@ -99,17 +99,13 @@ func makeRestoreClaim(mid, passcode string, timestamp int64, key *ecdsa.PublicKe
 	return newRestoreClaim(claim, rng), nil
 }
 
-func (c *RestoreClaim) Restore(key, payload []byte) (BackupKeys, error) {
+func (c *RestoreClaim) Restore(key, payload []byte) (LetterSealingKeys, error) {
 	if len(c.Seed()) == 0 {
 		return nil, errors.New("invalid seed size")
 	}
 	return makeRestoreBackupKeys(c.Seed(), key, payload)
 }
 
-func (c *RestoreClaim) Seed() []byte {
-	return c.seed
-}
+func (c *RestoreClaim) Seed() []byte { return c.seed }
 
-func (c *RestoreClaim) Claim() []byte {
-	return c.claim
-}
+func (c *RestoreClaim) Claim() []byte { return c.claim }

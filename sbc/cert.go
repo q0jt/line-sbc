@@ -41,12 +41,12 @@ MAwGCCqGSM49BAMCBQADSAAwRQIhAOscJ4KbfP/pKwLsd2HYFee0mABuhCQTUR3v
 act3AKUxAiAQqsuL6xFQS/+VV8lWQfVV6BWAvvIidK0cPlG37i+9xQ==
 -----END CERTIFICATE-----`
 
-func importSGXPubKeys(data []byte, isRelease bool) (*ecdsa.PublicKey, error) {
+func importServiceCert(data []byte, rel bool) (*ecdsa.PublicKey, error) {
 	cert, err := loadCertificate(data)
 	if err != nil {
 		return nil, err
 	}
-	pk, err := importRootSGXPubKeys(isRelease)
+	pk, err := importSGXPubKeys(rel)
 	if err != nil {
 		return nil, err
 	}
@@ -60,9 +60,9 @@ func importSGXPubKeys(data []byte, isRelease bool) (*ecdsa.PublicKey, error) {
 	return nil, errors.New("sbc: internal error while importing sgx cert")
 }
 
-func importRootSGXPubKeys(isRelease bool) (*ecdsa.PublicKey, error) {
+func importSGXPubKeys(rel bool) (*ecdsa.PublicKey, error) {
 	data := []byte(releaseBackupCert)
-	if !isRelease {
+	if !rel {
 		data = []byte(betaBackupCert)
 	}
 	cert, err := loadCertificate(data)
@@ -72,7 +72,7 @@ func importRootSGXPubKeys(isRelease bool) (*ecdsa.PublicKey, error) {
 	if key, ok := cert.PublicKey.(*ecdsa.PublicKey); ok {
 		return key, nil
 	}
-	return nil, nil
+	return nil, errors.New("error")
 }
 
 func loadCertificate(b []byte) (*x509.Certificate, error) {

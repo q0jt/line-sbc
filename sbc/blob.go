@@ -2,6 +2,7 @@ package sbc
 
 import (
 	"encoding/json"
+
 	"github.com/q0jt/line-sbc/sbc/internal/msgpack"
 )
 
@@ -12,9 +13,14 @@ type BackupKey struct {
 	E2eePublicKey  string `json:"encoded_public_key"`
 }
 
-type BackupKeys = map[int32]*BackupKey
+type LetterSealingKey struct {
+	KeyID     int32
+	BackupKey *BackupKey
+}
 
-func makeRestoreBackupKeys(seed, ek, payload []byte) (BackupKeys, error) {
+type LetterSealingKeys []*LetterSealingKey
+
+func makeRestoreBackupKeys(seed, ek, payload []byte) (LetterSealingKeys, error) {
 	key, err := hkdf(seed, nil, []byte("RESTORE_SEED"), 0x10, 0x10)
 	if err != nil {
 		return nil, err
@@ -47,13 +53,18 @@ func makeRestoreBackupKeys(seed, ek, payload []byte) (BackupKeys, error) {
 	if err != nil {
 		return nil, err
 	}
-	keys := make(BackupKeys, len(section))
-	for i := 0; i < len(section); i++ {
+
+	size := len(section)
+	keys := make(LetterSealingKeys, 0, size)
+
+	for i := 0; i < size; i++ {
 		var bk BackupKey
 		if err := json.Unmarshal(section[i], &bk); err != nil {
 			return nil, err
 		}
-		keys[blob.MetaData[i]] = &bk
+		keys = append(keys, &LetterSealingKey{
+			KeyID:     blob.MetaData[i],
+			BackupKey: &bk})
 	}
 
 	return keys, nil
