@@ -6,4 +6,4 @@ require golang.org/x/crypto v0.27.0
 
 require golang.org/x/sys v0.25.0 // indirect
 
-replace golang.org/x/crypto => github.com/q0jt/crypto v0.1.0
+replace golang.org/x/crypto => github.com/q0jt/crypto v0.2.0
