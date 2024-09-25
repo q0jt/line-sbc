@@ -33,9 +33,9 @@ func hkdf(key, salt, info []byte, size, iv uint32) ([]byte, error) {
 	return out, nil
 }
 
-func argon2id(pin, mid, aad []byte) []byte {
+func argon2id(pwd, mid, aad []byte) []byte {
 	return argon2.IDKeyWithAAD(
-		pin, mid, aad, 4, 128*1024, 4, 0x10)
+		pwd, mid, aad, 4, 128*1024, 4, 0x10)
 }
 
 func genShardSecret(pk *ecdh.PublicKey) (*ecdh.PrivateKey, []byte, error) {
