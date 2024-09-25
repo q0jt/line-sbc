@@ -19,6 +19,8 @@ func CreateClaimFromSharedSecret(secret []byte) *RestoreClaim {
 	return newRestoreClaim(nil, secret)
 }
 
+// CreateFromPin generates a claim using the user's internal identifier,
+// a 6-digit passcode, and a service certificate.
 func CreateFromPin(mid, passcode, path string) (*RestoreClaim, error) {
 	timestamp := time.Now().UnixMilli()
 	return createFromPin(mid, passcode, path, timestamp)
@@ -102,6 +104,12 @@ func makeRestoreClaim(mid, passcode string, timestamp int64, key *ecdsa.PublicKe
 func (c *RestoreClaim) Restore(key, payload []byte) (LetterSealingKeys, error) {
 	if len(c.Seed()) == 0 {
 		return nil, errors.New("invalid seed size")
+	}
+	if key == nil {
+		return nil, errors.New("invalid key size")
+	}
+	if payload == nil {
+		return nil, errors.New("invalid payload size")
 	}
 	return makeRestoreBackupKeys(c.Seed(), key, payload)
 }

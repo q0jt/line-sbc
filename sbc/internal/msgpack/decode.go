@@ -6,6 +6,11 @@ import (
 	"errors"
 )
 
+var (
+	ErrUnpack            = errors.New("msgpack unpack failure")
+	ErrUnpackRecoveryKey = errors.New("recovery key unpack failed")
+)
+
 type decoder struct {
 	buf *bytes.Reader
 	off int
@@ -46,12 +51,10 @@ func (d *decoder) unpackArray() int {
 		v6 := binary.BigEndian.Uint32(size)
 		d.off += 4
 		return int(v6)
-	} else if magic == 0xDC {
-		v6 := binary.BigEndian.Uint16(size)
-		d.off += 2
-		return int(v6)
 	}
-	return -1
+	v6 := binary.BigEndian.Uint16(size)
+	d.off += 2
+	return int(v6)
 }
 
 func (d *decoder) unpackUint() (uint, error) {
@@ -63,6 +66,16 @@ func (d *decoder) unpackUint() (uint, error) {
 		return 0, errors.New("sbc/msgpack: only accept positive int")
 	}
 	return uint(c[0]), nil
+}
+
+func decodeUint(b []byte) (uint, error) {
+	if len(b) == 0 {
+		return 0, errors.New("invalid buffer size")
+	}
+	if b[0]&0x80 != 0 {
+		return 0, errors.New("only accept positive int")
+	}
+	return uint(b[0]), nil
 }
 
 func unpackUint16(b []byte) uint16 {
@@ -91,6 +104,22 @@ func (d *decoder) unpackBin() ([]byte, error) {
 		return d.read(int(size))
 	}
 	return nil, errors.New("sbc/pack.go: invalid data")
+}
+
+func (d *decoder) unpackString() (string, error) {
+	c, err := d.read(1)
+	if err != nil {
+		return "", err
+	}
+	if (c[0]>>0x5)&0x07 != 0x5 {
+		return "", errors.New("err")
+	}
+	size := int(c[0] & 0x1F)
+	str, err := d.read(size)
+	if err != nil {
+		return "", err
+	}
+	return string(str), nil
 }
 
 func (d *decoder) unpackInt32() int32 {
@@ -131,7 +160,7 @@ func UnpackRecoveryKey(b []byte) ([]byte, error) {
 		return nil, err
 	}
 	if len(key) != 0x10 {
-		return nil, errors.New("error")
+		return nil, ErrUnpackRecoveryKey
 	}
 	return key, nil
 }
@@ -149,27 +178,28 @@ func (p *BlobPayload) IsMigration() bool {
 
 func (d *decoder) unpackBlobPayload() (*BlobPayload, error) {
 	if d.unpackArray() != 3 {
-		return nil, errors.New("error: 1: unpackArray")
+		return nil, errors.New("sbc/msgpack: invalid array length")
 	}
 	objType, err := d.unpackUint()
 	if err != nil {
-		return nil, err
+		return nil, errors.New("sbc/msgpack: ")
 	}
 	if objType != 1 {
-		return nil, errors.New("error: 2: unpackUint")
+		return nil, errors.New("sbc/msgpack: backup keys contained an unknown object type")
 	}
 
-	var payload BlobPayload
 	metaContainerSize := d.unpackArray()
 	keyIds := make([]int32, metaContainerSize)
+
+	var payload BlobPayload
 
 	for i := 0; i < metaContainerSize; i++ {
 		v := d.unpackArray()
 		d.unpackUint()
-		if v == 2 {
-			keyIds[i] = d.unpackInt32()
-		} else {
+		if v != 2 {
 			payload.isMigration = true
+		} else {
+			keyIds[i] = d.unpackInt32()
 		}
 	}
 
@@ -188,25 +218,30 @@ func (d *decoder) unpackBlobPayload() (*BlobPayload, error) {
 	return &payload, nil
 }
 
-func (d *decoder) unpackEncryptSection() ([][]byte, error) {
+func (d *decoder) unpackEncryptSection(mig bool) ([][]byte, error) {
 	size := d.unpackArray()
 	if size == 0 {
 		return nil, errors.New("error")
 	}
-	keys := make([][]byte, size)
+	if mig {
+		size--
+	}
+	containers := make([][]byte, size)
 	for i := 0; i < size; i++ {
 		data, err := d.unpackBin()
 		if err != nil {
 			return nil, err
 		}
-		keys[i] = data
+		containers[i] = data
 	}
-	return keys, nil
+	if mig {
+		d.unpackString()
+	}
+	return containers, nil
 }
-
-func UnpackEncryptSection(b []byte) ([][]byte, error) {
+func UnpackEncryptSection(b []byte, mig bool) ([][]byte, error) {
 	decoder := newDecoder(b)
-	return decoder.unpackEncryptSection()
+	return decoder.unpackEncryptSection(mig)
 }
 
 func UnpackBlobPayload(b []byte) (*BlobPayload, error) {

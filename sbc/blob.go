@@ -49,7 +49,7 @@ func makeRestoreBackupKeys(seed, ek, payload []byte) (LetterSealingKeys, error) 
 	if err != nil {
 		return nil, err
 	}
-	section, err := msgpack.UnpackEncryptSection(plaintext)
+	section, err := msgpack.UnpackEncryptSection(plaintext, blob.IsMigration())
 	if err != nil {
 		return nil, err
 	}

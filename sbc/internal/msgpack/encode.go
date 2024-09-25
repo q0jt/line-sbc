@@ -108,6 +108,10 @@ func (e *encoder) packBlobPayloadMetaData(payload *BlobPayload) error {
 	}
 	keyIds := payload.MetaData
 	size := len(keyIds)
+	isMig := payload.IsMigration()
+	if isMig {
+		size++
+	}
 	e.packArraySize(uint8(size))
 	for _, keyId := range keyIds {
 		e.packArraySize(2)
@@ -116,7 +120,7 @@ func (e *encoder) packBlobPayloadMetaData(payload *BlobPayload) error {
 			return err
 		}
 	}
-	if payload.IsMigration() {
+	if isMig {
 		e.packArraySize(1)
 		e.buf.WriteByte(2)
 	}
