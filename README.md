@@ -1,6 +1,7 @@
 # line-sbc
-This client is implemented based on reverse engineering of the LINE backup PIN.
+LINE-SBC is an implementation based on the reverse engineering of the Secure Backup Client.
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/q0jt/line-sbc.svg)](https://pkg.go.dev/github.com/q0jt/line-sbc)
 
 ### Usage
 ```
@@ -21,13 +22,16 @@ GET https://obs.line-scdn.net/{cert}
 ```go
 claim, err := sbc.CreateFromPin("mid", "backup PIN", "cert path")
 if err != nil {
-	log.Fatal(err)
+	// error
 }
 restore, err := RestoreE2EEKeyBackup(
 	&RestoreE2EEKeyBackupRequest{
 		RestoreClaim: claim.Claim(),
 	})
 keys, err := claim.Restore(restore.RecoveryKey, restore.BlobPayload)
+if err != nil {
+	// error
+}
 for _, backupKey := range keys {
 	fmt.Printf("keyID: %d\n", backupKey.KeyID)
 	fmt.Printf("private key: %s\n", backupKey.BackupKey.E2eePrivateKey)
