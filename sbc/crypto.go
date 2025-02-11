@@ -4,11 +4,11 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/ecdh"
+	kdf "crypto/hkdf"
 	"crypto/rand"
 	"crypto/sha256"
 
 	"github.com/q0jt/crypto/argon2"
-	kdf "github.com/q0jt/crypto/hkdf"
 )
 
 func sha256Sum(b []byte) []byte {
@@ -24,13 +24,9 @@ func randomBytes(size int) ([]byte, error) {
 	return rng, nil
 }
 
-func hkdf(key, salt, info []byte, size, iv uint32) ([]byte, error) {
-	h := kdf.New(sha256.New, key, salt, info)
-	out := make([]byte, size+iv)
-	if _, err := h.Read(out); err != nil {
-		return nil, err
-	}
-	return out, nil
+func hkdf(key, salt []byte, info string, size, iv uint32) ([]byte, error) {
+	return kdf.Key(
+		sha256.New, key, salt, info, int(size+iv))
 }
 
 func argon2id(pwd, mid, aad []byte) []byte {

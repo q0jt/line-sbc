@@ -2,7 +2,6 @@ package sbc
 
 import (
 	"encoding/json"
-
 	"github.com/q0jt/line-sbc/sbc/internal/msgpack"
 )
 
@@ -21,7 +20,7 @@ type LetterSealingKey struct {
 type LetterSealingKeys []*LetterSealingKey
 
 func makeRestoreBackupKeys(seed, ek, payload []byte) (LetterSealingKeys, error) {
-	key, err := hkdf(seed, nil, []byte("RESTORE_SEED"), 0x10, 0x10)
+	key, err := hkdf(seed, nil, "RESTORE_SEED", 0x10, 0x10)
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +32,7 @@ func makeRestoreBackupKeys(seed, ek, payload []byte) (LetterSealingKeys, error) 
 	if err != nil {
 		return nil, err
 	}
-	bs, err := hkdf(out, nil, []byte("BACKUP_SEED"), 0x10, 0xc)
+	bs, err := hkdf(out, nil, "BACKUP_SEED", 0x10, 0xc)
 	if err != nil {
 		return nil, err
 	}
