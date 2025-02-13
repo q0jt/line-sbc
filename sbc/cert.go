@@ -48,14 +48,10 @@ func importSGXPubKeys(rel bool) (*ecdsa.PublicKey, error) {
 	if key, ok := cert.PublicKey.(*ecdsa.PublicKey); ok {
 		return key, nil
 	}
-	return nil, errors.New("error")
+	return nil, errors.New("internal error")
 }
 
 func loadCertificate(b []byte) (*x509.Certificate, error) {
 	block, _ := pem.Decode(b)
-	cert, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		return nil, err
-	}
-	return cert, nil
+	return x509.ParseCertificate(block.Bytes)
 }
