@@ -101,7 +101,7 @@ func makeRestoreClaim(mid, passcode string, timestamp int64, key *ecdsa.PublicKe
 	return newRestoreClaim(claim, rng), nil
 }
 
-func (c *RestoreClaim) Restore(key, payload []byte) (LetterSealingKeys, error) {
+func (c *RestoreClaim) Restore(key, payload []byte) (*BackupKeys, error) {
 	if len(c.Seed()) == 0 {
 		return nil, errors.New("invalid seed size")
 	}

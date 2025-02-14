@@ -2,10 +2,11 @@ package sbc
 
 import (
 	"encoding/json"
+
 	"github.com/q0jt/line-sbc/sbc/internal/msgpack"
 )
 
-type BackupKey struct {
+type E2eeKey struct {
 	CreatedTime    int64  `json:"created_time"`
 	Version        int32  `json:"version"`
 	E2eePrivateKey string `json:"encoded_private_key"`
@@ -13,13 +14,18 @@ type BackupKey struct {
 }
 
 type LetterSealingKey struct {
-	KeyID     int32
-	BackupKey *BackupKey
+	KeyID   int32
+	E2eeKey *E2eeKey
 }
 
 type LetterSealingKeys []*LetterSealingKey
 
-func makeRestoreBackupKeys(seed, ek, payload []byte) (LetterSealingKeys, error) {
+type BackupKeys struct {
+	LetterSealingKeys LetterSealingKeys
+	Passcode          string
+}
+
+func makeRestoreBackupKeys(seed, ek, payload []byte) (*BackupKeys, error) {
 	key, err := hkdf(seed, nil, "RESTORE_SEED", 0x10, 0x10)
 	if err != nil {
 		return nil, err
@@ -48,7 +54,7 @@ func makeRestoreBackupKeys(seed, ek, payload []byte) (LetterSealingKeys, error) 
 	if err != nil {
 		return nil, err
 	}
-	section, err := msgpack.UnpackEncryptSection(plaintext, blob.IsMigration())
+	section, pin, err := msgpack.UnpackEncryptSection(plaintext, blob.ContainsPin())
 	if err != nil {
 		return nil, err
 	}
@@ -57,14 +63,23 @@ func makeRestoreBackupKeys(seed, ek, payload []byte) (LetterSealingKeys, error) 
 	keys := make(LetterSealingKeys, 0, size)
 
 	for i := 0; i < size; i++ {
-		var bk BackupKey
-		if err := json.Unmarshal(section[i], &bk); err != nil {
+		var ee E2eeKey
+		if err := json.Unmarshal(section[i], &ee); err != nil {
 			return nil, err
 		}
 		keys = append(keys, &LetterSealingKey{
-			KeyID:     blob.MetaData[i],
-			BackupKey: &bk})
+			KeyID:   blob.MetaData[i],
+			E2eeKey: &ee,
+		})
 	}
 
-	return keys, nil
+	var backupKeys BackupKeys
+
+	backupKeys.LetterSealingKeys = keys
+
+	if blob.ContainsPin() {
+		backupKeys.Passcode = pin
+	}
+
+	return &backupKeys, nil
 }
