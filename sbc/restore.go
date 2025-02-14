@@ -23,29 +23,29 @@ func CreateClaimFromSharedSecret(secret []byte) *RestoreClaim {
 // a 6-digit passcode, and a service certificate.
 func CreateFromPin(mid, passcode, path string) (*RestoreClaim, error) {
 	timestamp := time.Now().UnixMilli()
-	return createFromPin(mid, passcode, path, timestamp)
+	return createFromPin(mid, passcode, path, timestamp, true)
 }
 
 func CreateFromPinWithServerTime(mid, passcode, path string, timestamp int64) (*RestoreClaim, error) {
-	return createFromPin(mid, passcode, path, timestamp)
+	return createFromPin(mid, passcode, path, timestamp, true)
 }
 
 func newRestoreClaim(claim, seed []byte) *RestoreClaim {
 	return &RestoreClaim{claim: claim, seed: seed}
 }
 
-func createFromPin(mid, passcode, path string, timestamp int64) (*RestoreClaim, error) {
+func createFromPin(mid, passcode, path string, timestamp int64, rel bool) (*RestoreClaim, error) {
 	if !validateMid(mid) {
 		return nil, errors.New("invalid mid")
 	}
 	if !validatePasscode(passcode) {
 		return nil, errors.New("invalid passcode")
 	}
-	b, err := os.ReadFile(path)
+	cert, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	key, err := importServiceCert(b, true)
+	key, err := importServiceCert(cert, rel)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func makeRestoreClaim(mid, passcode string, timestamp int64, key *ecdsa.PublicKe
 		return nil, err
 	}
 
-	pin := argon2id([]byte(passcode), []byte(mid), []byte("ARGON2_PIN"))
+	pin := argon2id([]byte(passcode), []byte(mid), "ARGON2_PIN")
 
 	aad := make([]byte, 8)
 	binary.BigEndian.PutUint64(aad, uint64(timestamp))
