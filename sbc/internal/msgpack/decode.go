@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"github.com/q0jt/line-sbc/sbc/types"
 )
 
 var (
@@ -195,11 +196,19 @@ func (d *decoder) unpackBlobPayload() (*BlobPayload, error) {
 
 	for i := 0; i < metaContainerSize; i++ {
 		v := d.unpackArray()
-		d.unpackUint()
-		if v != 2 {
-			payload.isMigration = true
-		} else {
+		keyType, err := d.unpackUint()
+		if err != nil {
+			return nil, err
+		}
+		switch types.KeyType(keyType) {
+		case types.KeyTypeLetterSealing:
+			if v != 2 {
+				return nil, errors.New("sbc/msgpack: invalid data")
+			}
 			keyIds[i] = d.unpackInt32()
+		case types.KeyTypeBackupPin:
+			payload.isMigration = true
+		case types.KeyTypeBackupMasterKey:
 		}
 	}
 
