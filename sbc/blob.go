@@ -26,7 +26,7 @@ type BackupKeys struct {
 }
 
 func makeRestoreBackupKeys(seed, ek, payload []byte) (*BackupKeys, error) {
-	key, err := hkdf(seed, nil, "RESTORE_SEED", 0x10, 0x10)
+	key, err := deriveKey(seed, nil, "RESTORE_SEED", 0x20)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +38,7 @@ func makeRestoreBackupKeys(seed, ek, payload []byte) (*BackupKeys, error) {
 	if err != nil {
 		return nil, err
 	}
-	bs, err := hkdf(out, nil, "BACKUP_SEED", 0x10, 0xc)
+	bs, err := deriveKey(out, nil, "BACKUP_SEED", 0x1c)
 	if err != nil {
 		return nil, err
 	}

@@ -61,7 +61,7 @@ func makeRestoreClaim(mid, passcode string, timestamp int64, key *ecdsa.PublicKe
 	if err != nil {
 		return nil, err
 	}
-	cs, err := hkdf(sharedSecret, nil, "CLAIM_SHARED", 0x10, 0x10)
+	cs, err := deriveKey(sharedSecret, nil, "CLAIM_SHARED", 0x20)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func makeRestoreClaim(mid, passcode string, timestamp int64, key *ecdsa.PublicKe
 	if err != nil {
 		return nil, err
 	}
-	seed, err := hkdf(rng, []byte(mid), "CLAIM_SEED", 0x10, 0xc)
+	seed, err := deriveKey(rng, []byte(mid), "CLAIM_SEED", 0x1c)
 	if err != nil {
 		return nil, err
 	}

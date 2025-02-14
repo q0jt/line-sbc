@@ -4,7 +4,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/ecdh"
-	kdf "crypto/hkdf"
+	"crypto/hkdf"
 	"crypto/rand"
 	"crypto/sha256"
 
@@ -22,9 +22,8 @@ func randomBytes(size int) ([]byte, error) {
 	return rng, nil
 }
 
-func hkdf(key, salt []byte, info string, size, iv uint32) ([]byte, error) {
-	return kdf.Key(
-		sha256.New, key, salt, info, int(size+iv))
+func deriveKey(key, salt []byte, info string, size int) ([]byte, error) {
+	return hkdf.Key(sha256.New, key, salt, info, size)
 }
 
 func argon2id(pwd, mid, aad []byte) []byte {
