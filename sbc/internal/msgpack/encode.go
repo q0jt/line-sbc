@@ -108,7 +108,7 @@ func (e *encoder) packBlobPayloadMetaData(payload *BlobPayload) error {
 	}
 	keyIds := payload.MetaData
 	size := len(keyIds)
-	isMig := payload.IsMigration()
+	isMig := payload.ContainsPin()
 	if isMig {
 		size++
 	}

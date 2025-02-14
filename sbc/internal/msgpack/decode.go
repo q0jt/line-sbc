@@ -173,7 +173,7 @@ type BlobPayload struct {
 	isMigration bool
 }
 
-func (p *BlobPayload) IsMigration() bool {
+func (p *BlobPayload) ContainsPin() bool {
 	return p.isMigration
 }
 
@@ -227,10 +227,10 @@ func (d *decoder) unpackBlobPayload() (*BlobPayload, error) {
 	return &payload, nil
 }
 
-func (d *decoder) unpackEncryptSection(mig bool) ([][]byte, error) {
+func (d *decoder) unpackEncryptSection(mig bool) ([][]byte, string, error) {
 	size := d.unpackArray()
 	if size == 0 {
-		return nil, errors.New("error")
+		return nil, "", errors.New("error")
 	}
 	if mig {
 		size--
@@ -239,16 +239,20 @@ func (d *decoder) unpackEncryptSection(mig bool) ([][]byte, error) {
 	for i := 0; i < size; i++ {
 		data, err := d.unpackBin()
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		containers[i] = data
 	}
-	if mig {
-		d.unpackString()
+	if !mig {
+		return containers, "", nil
 	}
-	return containers, nil
+	pin, err := d.unpackString()
+	if err != nil {
+		return nil, "", err
+	}
+	return containers, pin, nil
 }
-func UnpackEncryptSection(b []byte, mig bool) ([][]byte, error) {
+func UnpackEncryptSection(b []byte, mig bool) ([][]byte, string, error) {
 	decoder := newDecoder(b)
 	return decoder.unpackEncryptSection(mig)
 }
