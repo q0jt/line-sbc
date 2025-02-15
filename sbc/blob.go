@@ -25,16 +25,16 @@ type BackupKeys struct {
 	Passcode          string
 }
 
-func makeRestoreBackupKeys(seed, ek, payload []byte) (*BackupKeys, error) {
-	key, err := deriveKey(seed, nil, "RESTORE_SEED", 0x20)
+func makeRestoreBackupKeys(seed, key, payload []byte) (*BackupKeys, error) {
+	rs, err := deriveKey(seed, nil, "RESTORE_SEED", 0x20)
 	if err != nil {
 		return nil, err
 	}
-	rk, err := msgpack.UnpackRecoveryKey(ek)
+	rk, err := msgpack.UnpackRecoveryKey(key)
 	if err != nil {
 		return nil, err
 	}
-	out, err := cryptoAesCTR(key[:0x10], key[0x10:], rk)
+	out, err := cryptoAesCTR(rs[:0x10], rs[0x10:], rk)
 	if err != nil {
 		return nil, err
 	}
@@ -63,13 +63,13 @@ func makeRestoreBackupKeys(seed, ek, payload []byte) (*BackupKeys, error) {
 	keys := make(LetterSealingKeys, 0, size)
 
 	for i := 0; i < size; i++ {
-		var ee E2eeKey
-		if err := json.Unmarshal(section[i], &ee); err != nil {
+		var ek E2eeKey
+		if err := json.Unmarshal(section[i], &ek); err != nil {
 			return nil, err
 		}
 		keys = append(keys, &LetterSealingKey{
 			KeyID:   blob.MetaData[i],
-			E2eeKey: &ee,
+			E2eeKey: &ek,
 		})
 	}
 
