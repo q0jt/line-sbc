@@ -23,7 +23,7 @@ func CreateClaimFromSharedSecret(secret []byte) *RestoreClaim {
 // a 6-digit passcode, and a service certificate.
 func CreateFromPin(mid, passcode, path string) (*RestoreClaim, error) {
 	timestamp := time.Now().UnixMilli()
-	return createFromPin(mid, passcode, path, timestamp, true)
+	return CreateFromPinWithServerTime(mid, passcode, path, timestamp)
 }
 
 func CreateFromPinWithServerTime(mid, passcode, path string, timestamp int64) (*RestoreClaim, error) {
