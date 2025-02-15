@@ -7,3 +7,17 @@ const (
 	KeyTypeBackupPin
 	KeyTypeBackupMasterKey
 )
+
+type FactorType int
+
+const (
+	FactorTypePassword FactorType = iota
+	FactorTypeRecoveryCode
+)
+
+type PayloadType int
+
+const (
+	PayloadTypeLetterSealingKey PayloadType = iota
+	PayloadTypeInitialFullSyncKey
+)
