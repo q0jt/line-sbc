@@ -19,6 +19,10 @@ func CreateClaimFromSharedSecret(secret []byte) *RestoreClaim {
 	return newRestoreClaim(nil, secret)
 }
 
+func newRestoreClaim(claim, seed []byte) *RestoreClaim {
+	return &RestoreClaim{claim: claim, seed: seed}
+}
+
 // CreateFromPin generates a claim using the user's internal identifier,
 // a 6-digit passcode, and a service certificate.
 func CreateFromPin(mid, passcode, path string) (*RestoreClaim, error) {
@@ -28,10 +32,6 @@ func CreateFromPin(mid, passcode, path string) (*RestoreClaim, error) {
 
 func CreateFromPinWithServerTime(mid, passcode, path string, timestamp int64) (*RestoreClaim, error) {
 	return createFromPin(mid, passcode, path, timestamp, true)
-}
-
-func newRestoreClaim(claim, seed []byte) *RestoreClaim {
-	return &RestoreClaim{claim: claim, seed: seed}
 }
 
 func createFromPin(mid, passcode, path string, timestamp int64, rel bool) (*RestoreClaim, error) {
@@ -91,9 +91,9 @@ func makeRestoreClaim(mid, passcode string, timestamp int64, key *ecdsa.PublicKe
 	tempKey := stripP256Prefix(sk.PublicKey().Bytes())
 	certKey := stripP256Prefix(pk.Bytes())
 
-	kw := msgpack.NewKeyWrap(certKey, enc)
+	wrap := msgpack.NewKeyWrap(certKey, enc)
 
-	claim, err := msgpack.EncodeClaim(kw, tempKey, ciphertext, timestamp)
+	claim, err := msgpack.EncodeClaim(wrap, tempKey, ciphertext, timestamp)
 	if err != nil {
 		return nil, err
 	}
@@ -103,13 +103,13 @@ func makeRestoreClaim(mid, passcode string, timestamp int64, key *ecdsa.PublicKe
 
 func (c *RestoreClaim) Restore(key, payload []byte) (*BackupKeys, error) {
 	if len(c.Seed()) == 0 {
-		return nil, errors.New("invalid seed size")
+		return nil, errors.New("sbc: invalid seed size")
 	}
-	if key == nil {
-		return nil, errors.New("invalid key size")
+	if len(key) == 0 {
+		return nil, errors.New("sbc: invalid key size")
 	}
-	if payload == nil {
-		return nil, errors.New("invalid payload size")
+	if len(payload) == 0 {
+		return nil, errors.New("sbc: invalid payload size")
 	}
 	return makeRestoreBackupKeys(c.Seed(), key, payload)
 }
