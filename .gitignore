@@ -24,5 +24,8 @@ go.work
 
 .DS_Store
 
-# Test Cert
+# Test SGX Certificate
 server-LNSGXTE1505.backup.security.linecorp.com.pem
+
+# Test Nitrokey Certificate
+node-nitrokey.backup.security.linecorp.com.pem
