@@ -33,9 +33,10 @@ keys, err := claim.Restore(restore.RecoveryKey, restore.BlobPayload)
 if err != nil {
 	// error
 }
-for _, backupKey := range keys {
-	fmt.Printf("keyID: %d\n", backupKey.KeyID)
-	fmt.Printf("private key: %s\n", backupKey.BackupKey.E2eePrivateKey)
+fmt.Println("pin: ", keys.Passcode)
+for _, key := range keys.LetterSealingKeys {
+    fmt.Printf("key id: %d\n", key.KeyID)
+    fmt.Printf("private key: %s\n", key.E2eeKey.E2eePrivateKey)
 }
 ```
 
