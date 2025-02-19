@@ -39,6 +39,12 @@ struct GetE2EEKeyBackupCertificatesResponse {
     1: list<string> urlHashList;
 }
 
+struct GetKeyBackupCertificatesV2Request {}
+
+struct GetKeyBackupCertificatesV2Response {
+    1: list<string> urlHashList;
+}
+
 enum KeyBackupErrorCode {
     ILLEGAL_ARGUMENT = 0,
     AUTHENTICATION_FAILED = 1,
@@ -48,7 +54,8 @@ enum KeyBackupErrorCode {
     INVALID_PIN = 6,
     PERMANENTLY_LOCKED = 7,
     INVALID_PASSWORD = 8,
-    MASTER_KEY_CONFLICT = 9
+    MASTER_KEY_CONFLICT = 9,
+    KEY_BACKUP_HEADER_MISMATCH = 10
 }
 
 exception E2EEKeyBackupException {
@@ -72,5 +79,9 @@ service E2EEKeyBackupService {
 
     GetE2EEKeyBackupCertificatesResponse getE2EEKeyBackupCertificates(
         2: GetE2EEKeyBackupCertificatesRequest request
+    ) throws(1: E2EEKeyBackupException e);
+
+    GetKeyBackupCertificatesV2Response getKeyBackupCertificatesV2(
+        2: GetKeyBackupCertificatesV2Request request
     ) throws(1: E2EEKeyBackupException e);
 }
