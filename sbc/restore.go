@@ -57,7 +57,7 @@ func makeRestoreClaim(mid, passcode string, timestamp int64, key *ecdsa.PublicKe
 	if err != nil {
 		return nil, err
 	}
-	sk, sharedSecret, err := genShardSecret(pk)
+	tempKey, sharedSecret, err := generateShardSecret(pk)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +88,6 @@ func makeRestoreClaim(mid, passcode string, timestamp int64, key *ecdsa.PublicKe
 		return nil, err
 	}
 
-	tempKey := stripP256Prefix(sk.PublicKey().Bytes())
 	certKey := stripP256Prefix(pk.Bytes())
 
 	wrap := msgpack.NewKeyWrap(certKey, enc)
