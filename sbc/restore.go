@@ -45,7 +45,7 @@ func createFromPin(mid, passcode, path string, timestamp int64, rel bool) (*Rest
 	if err != nil {
 		return nil, err
 	}
-	key, err := importServiceCert(cert, rel)
+	key, err := importServicePubKeys(cert, rel)
 	if err != nil {
 		return nil, err
 	}

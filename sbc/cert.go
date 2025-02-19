@@ -12,19 +12,14 @@ import (
 )
 
 //go:embed certs/*
-var backupCerts embed.FS
+var backupCACerts embed.FS
 
-func importServiceCert(data []byte, rel bool) (*ecdh.PublicKey, error) {
+func importServicePubKeys(data []byte, rel bool) (*ecdh.PublicKey, error) {
 	cert, err := loadCertificate(data)
 	if err != nil {
 		return nil, err
 	}
-	pk, err := importSGXPubKeys(rel)
-	if err != nil {
-		return nil, err
-	}
-	hash := sha256Sum(cert.RawTBSCertificate)
-	if !ecdsa.VerifyASN1(pk, hash, cert.Signature) {
+	if err := verifyServiceCert(cert, rel); err != nil {
 		return nil, errors.New("invalid cert signature")
 	}
 	if key, ok := cert.PublicKey.(*ecdsa.PublicKey); ok {
@@ -33,35 +28,44 @@ func importServiceCert(data []byte, rel bool) (*ecdh.PublicKey, error) {
 	return nil, errors.New("sbc: internal error while importing sgx cert")
 }
 
-func importSGXPubKeys(rel bool) (*ecdsa.PublicKey, error) {
+func verifyServiceCert(cert *x509.Certificate, rel bool) error {
+	roots := x509.NewCertPool()
+	ca, err := importSGXCACert(rel)
+	if err != nil {
+		return err
+	}
+	roots.AddCert(ca)
+	opts := x509.VerifyOptions{
+		Roots: roots,
+	}
+	if _, err := cert.Verify(opts); err != nil {
+		return err
+	}
+	return nil
+}
+
+func importSGXCACert(rel bool) (*x509.Certificate, error) {
 	name := "backup.security.linecorp.com.pem"
 	if !rel {
 		name = "backup-beta.security.linecorp.com.pem"
 	}
-	return loadPubKey(name)
+	return loadBackupCACert(name)
 }
 
-func importNitroPublicKeys(rel bool) (*ecdsa.PublicKey, error) {
+func importNitroCACert(rel bool) (*x509.Certificate, error) {
 	name := "nitrokey.backup.security.linecorp.com.pem"
 	if !rel {
 		name = "nitrokey.beta.backup.security.linecorp.com.pem"
 	}
-	return loadPubKey(name)
+	return loadBackupCACert(name)
 }
 
-func loadPubKey(name string) (*ecdsa.PublicKey, error) {
-	data, err := fs.ReadFile(backupCerts, filepath.Join("certs", name))
+func loadBackupCACert(name string) (*x509.Certificate, error) {
+	data, err := fs.ReadFile(backupCACerts, filepath.Join("certs", name))
 	if err != nil {
 		return nil, err
 	}
-	cert, err := loadCertificate(data)
-	if err != nil {
-		return nil, err
-	}
-	if key, ok := cert.PublicKey.(*ecdsa.PublicKey); ok {
-		return key, nil
-	}
-	return nil, errors.New("internal error")
+	return loadCertificate(data)
 }
 
 func loadCertificate(b []byte) (*x509.Certificate, error) {
