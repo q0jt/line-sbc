@@ -11,11 +11,6 @@ import (
 	"github.com/q0jt/crypto/argon2"
 )
 
-func sha256Sum(b []byte) []byte {
-	sum := sha256.Sum256(b)
-	return sum[:]
-}
-
 func randomBytes(size int) ([]byte, error) {
 	rng := make([]byte, size)
 	rand.Read(rng)
