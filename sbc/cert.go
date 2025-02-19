@@ -38,6 +38,18 @@ func importSGXPubKeys(rel bool) (*ecdsa.PublicKey, error) {
 	if !rel {
 		name = "backup-beta.security.linecorp.com.pem"
 	}
+	return loadPubKey(name)
+}
+
+func importNitroPublicKeys(rel bool) (*ecdsa.PublicKey, error) {
+	name := "nitrokey.backup.security.linecorp.com.pem"
+	if !rel {
+		name = "nitrokey.beta.backup.security.linecorp.com.pem"
+	}
+	return loadPubKey(name)
+}
+
+func loadPubKey(name string) (*ecdsa.PublicKey, error) {
 	data, err := fs.ReadFile(backupCerts, filepath.Join("certs", name))
 	if err != nil {
 		return nil, err
