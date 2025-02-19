@@ -31,16 +31,21 @@ func argon2id(pwd, mid []byte, aad string) []byte {
 		pwd, mid, []byte(aad), 4, 128*1024, 4, 0x10)
 }
 
-func genShardSecret(pk *ecdh.PublicKey) (*ecdh.PrivateKey, []byte, error) {
+func generateEphemeralKey() (*ecdh.PrivateKey, error) {
 	curve := ecdh.P256()
-	key, err := curve.GenerateKey(rand.Reader)
+	return curve.GenerateKey(rand.Reader)
+}
+
+func generateShardSecret(pk *ecdh.PublicKey) ([]byte, []byte, error) {
+	sk, err := generateEphemeralKey()
 	if err != nil {
 		return nil, nil, err
 	}
-	secret, err := key.ECDH(pk)
+	secret, err := sk.ECDH(pk)
 	if err != nil {
 		return nil, nil, err
 	}
+	key := stripP256Prefix(sk.PublicKey().Bytes())
 	return key, secret, nil
 }
 
