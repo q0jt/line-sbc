@@ -1,7 +1,7 @@
 package sbc
 
 import (
-	"crypto/ecdsa"
+	"crypto/ecdh"
 	"encoding/binary"
 	"errors"
 	"os"
@@ -52,11 +52,7 @@ func createFromPin(mid, passcode, path string, timestamp int64, rel bool) (*Rest
 	return makeRestoreClaim(mid, passcode, timestamp, key)
 }
 
-func makeRestoreClaim(mid, passcode string, timestamp int64, key *ecdsa.PublicKey) (*RestoreClaim, error) {
-	pk, err := key.ECDH()
-	if err != nil {
-		return nil, err
-	}
+func makeRestoreClaim(mid, passcode string, timestamp int64, pk *ecdh.PublicKey) (*RestoreClaim, error) {
 	tempKey, sharedSecret, err := generateShardSecret(pk)
 	if err != nil {
 		return nil, err

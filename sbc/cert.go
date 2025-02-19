@@ -1,6 +1,7 @@
 package sbc
 
 import (
+	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/x509"
 	"embed"
@@ -13,7 +14,7 @@ import (
 //go:embed certs/*
 var backupCerts embed.FS
 
-func importServiceCert(data []byte, rel bool) (*ecdsa.PublicKey, error) {
+func importServiceCert(data []byte, rel bool) (*ecdh.PublicKey, error) {
 	cert, err := loadCertificate(data)
 	if err != nil {
 		return nil, err
@@ -27,7 +28,7 @@ func importServiceCert(data []byte, rel bool) (*ecdsa.PublicKey, error) {
 		return nil, errors.New("invalid cert signature")
 	}
 	if key, ok := cert.PublicKey.(*ecdsa.PublicKey); ok {
-		return key, nil
+		return key.ECDH()
 	}
 	return nil, errors.New("sbc: internal error while importing sgx cert")
 }
