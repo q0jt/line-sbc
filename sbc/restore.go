@@ -84,7 +84,7 @@ func makeRestoreClaim(mid, passcode string, timestamp int64, pk *ecdh.PublicKey)
 		return nil, err
 	}
 
-	certKey := stripP256Prefix(pk.Bytes())
+	certKey := stripP256PubKeyPrefix(pk.Bytes())
 
 	wrap := msgpack.NewKeyWrap(certKey, enc)
 

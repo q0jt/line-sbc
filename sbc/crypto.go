@@ -40,11 +40,11 @@ func generateShardSecret(pk *ecdh.PublicKey) ([]byte, []byte, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	key := stripP256Prefix(sk.PublicKey().Bytes())
+	key := stripP256PubKeyPrefix(sk.PublicKey().Bytes())
 	return key, secret, nil
 }
 
-func stripP256Prefix(key []byte) []byte {
+func stripP256PubKeyPrefix(key []byte) []byte {
 	if len(key) != 65 && key[0] != 0x04 {
 		return key
 	}
