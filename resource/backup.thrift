@@ -45,6 +45,68 @@ struct GetKeyBackupCertificatesV2Response {
     1: list<string> urlHashList;
 }
 
+struct E2EEMetadata {
+    1: i64 e2EEPublicKeyId;
+}
+
+enum SingleValueMetadataType {
+    INITIAL_BACKUP_ENCRYPTION_KEY = 0
+}
+
+struct SingleValueMetadata {
+    1: SingleValueMetadataType type;
+}
+
+struct LifetimePayloadMetaData {
+    1: E2EEMetadata e2ee;
+    2: SingleValueMetadata singleValue;
+}
+
+struct LifetimePayloadData {
+    1: LifetimePayloadMetaData metadata;
+    2: binary blobPayload;
+}
+
+struct CreateLifetimeKeyBackupRequest {
+    1: binary blobHeader;
+    2: list<LifetimePayloadData> payloadDataList;
+}
+
+struct RestoreLifetimeKeyBackupHeaderRequest {
+    1: binary restoreClaim;
+}
+
+struct RestoreLifetimeKeyBackupHeaderResponse {
+    1: binary recoveryKey;
+}
+
+struct ValidateLifetimeKeyBackupHeaderRequest {
+    1: i64 masterKeyTimestamp;
+    2: binary blobHeaderHash;
+}
+
+struct AddLifetimeKeyBackupPayloadDataListRequest {
+    1: list<LifetimePayloadData> payloadDataList;
+}
+
+struct LifetimeBackupFailedPayload {
+    1: LifetimePayloadData metadata;
+    2: KeyBackupErrorCode errorCode;
+}
+
+struct AddLifetimeKeyBackupPayloadDataListResponse {
+    1: list<LifetimeBackupFailedPayload> failedPayloads;
+}
+
+struct GetLifetimeKeyBackupPayloadDataListRequest {
+    1: list<LifetimePayloadData> metadataList;
+}
+
+struct GetLifetimeKeyBackupPayloadDataListResponse {
+    1: list<LifetimePayloadData> payloadDataList;
+    2: list<LifetimeBackupFailedPayload> failedPayloads;
+}
+
 enum KeyBackupErrorCode {
     ILLEGAL_ARGUMENT = 0,
     AUTHENTICATION_FAILED = 1,
@@ -80,8 +142,31 @@ service E2EEKeyBackupService {
     GetE2EEKeyBackupCertificatesResponse getE2EEKeyBackupCertificates(
         2: GetE2EEKeyBackupCertificatesRequest request
     ) throws(1: E2EEKeyBackupException e);
+}
 
+service E2eeKeyBackupCertificateService {
     GetKeyBackupCertificatesV2Response getKeyBackupCertificatesV2(
         2: GetKeyBackupCertificatesV2Request request
+    ) throws(1: E2EEKeyBackupException e);
+}
+
+service E2EELifetimeKeyBackupService {
+    void createLifetimeKeyBackup(
+        2: CreateLifetimeKeyBackupRequest request) throws(1: E2EEKeyBackupException e);
+
+    RestoreLifetimeKeyBackupHeaderResponse restoreLifetimeKeyBackupHeader(
+        2: RestoreLifetimeKeyBackupHeaderRequest request
+    ) throws(1: E2EEKeyBackupException e);
+
+    void validateLifetimeKeyBackupHeader(
+        2: ValidateLifetimeKeyBackupHeaderRequest request
+    ) throws(1: E2EEKeyBackupException e);
+
+    AddLifetimeKeyBackupPayloadDataListResponse addLifetimeKeyBackupPayloadDataList(
+        2: AddLifetimeKeyBackupPayloadDataListRequest request
+    ) throws(1: E2EEKeyBackupException e);
+
+    GetLifetimeKeyBackupPayloadDataListResponse getLifetimeKeyBackupPayloadDataList(
+        2: GetLifetimeKeyBackupPayloadDataListRequest request
     ) throws(1: E2EEKeyBackupException e);
 }
