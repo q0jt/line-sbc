@@ -12,7 +12,7 @@ import (
 )
 
 //go:embed certs/*
-var backupCACerts embed.FS
+var x509CACerts embed.FS
 
 func importServicePubKeys(data []byte, rel bool) (*ecdh.PublicKey, error) {
 	cert, err := loadCertificate(data)
@@ -20,7 +20,7 @@ func importServicePubKeys(data []byte, rel bool) (*ecdh.PublicKey, error) {
 		return nil, err
 	}
 	if err := verifyServiceCert(cert, rel); err != nil {
-		return nil, errors.New("invalid cert signature")
+		return nil, errors.New("sbc: invalid cert signature")
 	}
 	if key, ok := cert.PublicKey.(*ecdsa.PublicKey); ok {
 		return key.ECDH()
@@ -49,7 +49,7 @@ func importSGXCACert(rel bool) (*x509.Certificate, error) {
 	if !rel {
 		name = "backup-beta.security.linecorp.com.pem"
 	}
-	return loadBackupCACert(name)
+	return loadX509CACert(name)
 }
 
 func importNitroCACert(rel bool) (*x509.Certificate, error) {
@@ -57,11 +57,11 @@ func importNitroCACert(rel bool) (*x509.Certificate, error) {
 	if !rel {
 		name = "nitrokey.beta.backup.security.linecorp.com.pem"
 	}
-	return loadBackupCACert(name)
+	return loadX509CACert(name)
 }
 
-func loadBackupCACert(name string) (*x509.Certificate, error) {
-	data, err := fs.ReadFile(backupCACerts, filepath.Join("certs", name))
+func loadX509CACert(name string) (*x509.Certificate, error) {
+	data, err := fs.ReadFile(x509CACerts, filepath.Join("certs", name))
 	if err != nil {
 		return nil, err
 	}

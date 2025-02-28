@@ -1,9 +1,9 @@
 package types
 
-type KeyType int
+type BackupKeyType int
 
 const (
-	KeyTypeLetterSealing KeyType = iota + 1
+	KeyTypeE2eeKey BackupKeyType = iota + 1
 	KeyTypeBackupPin
 	KeyTypeBackupMasterKey
 )

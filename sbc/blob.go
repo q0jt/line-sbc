@@ -7,10 +7,10 @@ import (
 )
 
 type E2eeKey struct {
-	CreatedTime    int64  `json:"created_time"`
-	Version        int32  `json:"version"`
-	E2eePrivateKey string `json:"encoded_private_key"`
-	E2eePublicKey  string `json:"encoded_public_key"`
+	CreatedTime int64  `json:"created_time"`
+	Version     int32  `json:"version"`
+	PrivateKey  string `json:"encoded_private_key"`
+	PublicKey   string `json:"encoded_public_key"`
 }
 
 type LetterSealingKey struct {

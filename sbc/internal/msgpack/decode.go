@@ -200,8 +200,8 @@ func (d *decoder) unpackBlobPayload() (*BlobPayload, error) {
 		if err != nil {
 			return nil, err
 		}
-		switch types.KeyType(keyType) {
-		case types.KeyTypeLetterSealing:
+		switch types.BackupKeyType(keyType) {
+		case types.KeyTypeE2eeKey:
 			if v != 2 {
 				return nil, errors.New("sbc/msgpack: invalid data")
 			}
