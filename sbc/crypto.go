@@ -21,9 +21,9 @@ func deriveKey(key, salt []byte, info string, size int) ([]byte, error) {
 	return hkdf.Key(sha256.New, key, salt, info, size)
 }
 
-func argon2id(pwd, mid []byte, aad string) []byte {
+func argon2id(pwd []byte, mid, aad string) []byte {
 	return argon2.IDKeyWithAAD(
-		pwd, mid, []byte(aad), 4, 128*1024, 4, 0x10)
+		pwd, []byte(mid), []byte(aad), 4, 128*1024, 4, 0x10)
 }
 
 func generateEphemeralKey() (*ecdh.PrivateKey, error) {
