@@ -53,22 +53,16 @@ func createFromPin(mid, passcode, path string, timestamp int64, rel bool) (*Rest
 }
 
 func makeRestoreClaim(mid, passcode string, timestamp int64, pk *ecdh.PublicKey) (*RestoreClaim, error) {
-	tempKey, sharedSecret, err := generateShardSecret(pk)
-	if err != nil {
-		return nil, err
-	}
-	cs, err := deriveKey(sharedSecret, nil, "CLAIM_SHARED", 0x20)
-	if err != nil {
-		return nil, err
-	}
 	rng, err := randomBytes(0x10)
 	if err != nil {
 		return nil, err
 	}
-	enc, err := cryptoAesCTR(cs[:0x10], cs[0x10:], rng)
+
+	wrap, tempKey, err := wrapBackupECDHKey(pk, rng, "CLAIM_SHARED")
 	if err != nil {
 		return nil, err
 	}
+
 	seed, err := deriveKey(rng, []byte(mid), "CLAIM_SEED", 0x1c)
 	if err != nil {
 		return nil, err
@@ -84,16 +78,33 @@ func makeRestoreClaim(mid, passcode string, timestamp int64, pk *ecdh.PublicKey)
 		return nil, err
 	}
 
-	certKey := stripP256PubKeyPrefix(pk.Bytes())
-
-	wrap := msgpack.NewKeyWrap(certKey, enc)
-
 	claim, err := msgpack.EncodeClaim(wrap, tempKey, ciphertext, timestamp)
 	if err != nil {
 		return nil, err
 	}
 
 	return newRestoreClaim(claim, rng), nil
+}
+
+func wrapBackupECDHKey(pk *ecdh.PublicKey, seed []byte, info string) (*msgpack.KeyWrap, []byte, error) {
+	key, secret, err := generateShardSecret(pk)
+	if err != nil {
+		return nil, nil, err
+	}
+	cs, err := deriveKey(secret, nil, info, 0x20)
+	if err != nil {
+		return nil, nil, err
+	}
+	enc, err := cryptoAesCTR(cs[:0x10], cs[0x10:], seed)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	certKey := stripP256PubKeyPrefix(pk.Bytes())
+
+	wrap := msgpack.NewKeyWrap(certKey, enc)
+
+	return wrap, key, nil
 }
 
 func (c *RestoreClaim) Restore(key, payload []byte) (*BackupKeys, error) {
