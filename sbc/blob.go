@@ -6,23 +6,23 @@ import (
 	"github.com/q0jt/line-sbc/sbc/internal/msgpack"
 )
 
-type E2eeKey struct {
+type E2eeKeyData struct {
 	CreatedTime int64  `json:"created_time"`
 	Version     int32  `json:"version"`
 	PrivateKey  string `json:"encoded_private_key"`
 	PublicKey   string `json:"encoded_public_key"`
 }
 
-type LetterSealingKey struct {
+type E2eeKey struct {
 	KeyID   int32
-	E2eeKey *E2eeKey
+	E2eeKey *E2eeKeyData
 }
 
-type LetterSealingKeys []*LetterSealingKey
+type E2eeKeys []*E2eeKey
 
 type BackupKeys struct {
-	LetterSealingKeys LetterSealingKeys
-	Passcode          string
+	E2eeKeys E2eeKeys
+	Passcode string
 }
 
 func makeRestoreBackupKeys(seed, key, payload []byte) (*BackupKeys, error) {
@@ -60,22 +60,22 @@ func makeRestoreBackupKeys(seed, key, payload []byte) (*BackupKeys, error) {
 	}
 
 	size := len(section)
-	keys := make(LetterSealingKeys, 0, size)
+	keys := make(E2eeKeys, 0, size)
 
 	for i := 0; i < size; i++ {
-		var ek E2eeKey
-		if err := json.Unmarshal(section[i], &ek); err != nil {
+		var data E2eeKeyData
+		if err := json.Unmarshal(section[i], &data); err != nil {
 			return nil, err
 		}
-		keys = append(keys, &LetterSealingKey{
+		keys = append(keys, &E2eeKey{
 			KeyID:   blob.MetaData[i],
-			E2eeKey: &ek,
+			E2eeKey: &data,
 		})
 	}
 
 	var backupKeys BackupKeys
 
-	backupKeys.LetterSealingKeys = keys
+	backupKeys.E2eeKeys = keys
 
 	if blob.ContainsPin() {
 		backupKeys.Passcode = pin
