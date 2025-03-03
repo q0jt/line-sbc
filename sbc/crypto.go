@@ -8,7 +8,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 
-	"github.com/q0jt/crypto/argon2"
+	"github.com/q0jt/line-sbc/sbc/internal/argon2"
 )
 
 func randomBytes(size int) ([]byte, error) {
