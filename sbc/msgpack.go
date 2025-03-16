@@ -39,7 +39,7 @@ func marshalClaim(wrapKey, tempKey, pin []byte, timestamp int64) ([]byte, error)
 
 func marshalBlobPayloadMetaData(payload *blobPayload) ([]byte, error) {
 	if payload == nil {
-		return nil, errors.New("no BlobPayload")
+		return nil, errors.New("sbc/msgpack: no blob payload")
 	}
 
 	encoder := msgpack.NewEncoder()
@@ -68,7 +68,6 @@ func marshalBlobPayloadMetaData(payload *blobPayload) ([]byte, error) {
 }
 
 var (
-	ErrUnpackMsgPack     = errors.New("sbc/msgpack: data unpack failure")
 	ErrUnpackRecoveryKey = errors.New("sbc/msgpack: recovery key unpack failed")
 	ErrUnpackBlobPayload = errors.New("sbc/msgpack: blob payload unpack failed")
 )
@@ -114,7 +113,7 @@ func unmarshalBlobPayload(b []byte) (*blobPayload, error) {
 	}
 	objType, err := decoder.ReadUint()
 	if err != nil {
-		return nil, errors.New("sbc/msgpack: ")
+		return nil, err
 	}
 	if objType != 1 {
 		return nil, errors.New("sbc/msgpack: backup keys contained an unknown object type")
