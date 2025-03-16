@@ -12,9 +12,16 @@ go get -u github.com/q0jt/line-sbc
 
 ### How To Get Backup Cert
 ```
-E2EEKeyBackupService(/EKBS4)
+E2EEKeyBackupService
 
+// Intel SGX base
 cert = getE2EEKeyBackupCertificates()
+GET https://obs.line-scdn.net/{cert}
+
+E2eeKeyBackupCertificateService
+
+// HSM base
+cert = getKeyBackupCertificatesV2()
 GET https://obs.line-scdn.net/{cert}
 ```
 
@@ -22,6 +29,7 @@ GET https://obs.line-scdn.net/{cert}
 <img width="350" src="./assets/images/backup_pin.png"/>
 
 ```go
+// CreateFromPin("uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", "123456", "server-LNSGXTE1505.backup.security.linecorp.com.pem")
 claim, err := sbc.CreateFromPin("mid", "backup PIN", "cert path")
 if err != nil {
 	// error
