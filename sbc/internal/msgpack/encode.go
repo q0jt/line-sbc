@@ -25,14 +25,6 @@ func (e *Encoder) WriteDirect(p []byte) {
 	e.buf.Write(p)
 }
 
-func (e *Encoder) WriteUint(c byte) error {
-	if c&0x80 != 0 {
-		return errors.New("sbc/msgpack: out of range of positive fixed int")
-	}
-	e.writeByteDirect(c)
-	return nil
-}
-
 func (e *Encoder) writeByteDirect(c byte) {
 	e.buf.WriteByte(c)
 }
@@ -43,22 +35,33 @@ func (e *Encoder) WriteArraySize(size uint8) {
 
 func (e *Encoder) WriteBinary(b []byte) {
 	size := len(b)
-	if size < 0xff {
+	if size < (2^8)-1 {
 		e.writeByteDirect(0xc4)
 		e.writeByteDirect(byte(size))
-	} else if size < 0xffff {
+	} else if size < (2^16)-1 {
 		e.writeByteDirect(0xc5)
 		length := make([]byte, 2)
 		binary.LittleEndian.PutUint16(length, uint16(size))
+		e.WriteDirect(length)
+	} else if size < (2^32)-1 {
+		e.writeByteDirect(0xc6)
+		length := uint32ToBytes(uint32(size))
 		e.WriteDirect(length)
 	}
 	e.WriteDirect(b)
 }
 
+func (e *Encoder) WriteUint(c byte) error {
+	if c&0x80 == 0 {
+		e.writeByteDirect(c)
+		return nil
+	}
+	return errors.New("sbc/msgpack: out of range of positive fixed int")
+}
+
 func (e *Encoder) WriteUint32(v uint32) {
 	e.writeByteDirect(0xce)
-	val := make([]byte, 4)
-	binary.BigEndian.PutUint32(val, v)
+	val := uint32ToBytes(v)
 	e.WriteDirect(val)
 }
 
@@ -67,4 +70,10 @@ func (e *Encoder) WriteUint64(v uint64) {
 	val := make([]byte, 8)
 	binary.BigEndian.PutUint64(val, v)
 	e.WriteDirect(val)
+}
+
+func uint32ToBytes(v uint32) []byte {
+	val := make([]byte, 4)
+	binary.BigEndian.PutUint32(val, v)
+	return val
 }
