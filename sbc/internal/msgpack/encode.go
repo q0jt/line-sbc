@@ -3,7 +3,6 @@ package msgpack
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 )
 
 type Encoder struct {
@@ -56,7 +55,7 @@ func (e *Encoder) WriteUint(c byte) error {
 		e.writeByteDirect(c)
 		return nil
 	}
-	return errors.New("sbc/msgpack: out of range of positive fixed int")
+	return ErrPackMsgPack
 }
 
 func (e *Encoder) WriteUint32(v uint32) {

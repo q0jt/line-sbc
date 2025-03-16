@@ -3,7 +3,6 @@ package msgpack
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 )
 
 type Decoder struct {
@@ -33,7 +32,7 @@ func (d *Decoder) ReadUint() (uint, error) {
 		return 0, err
 	}
 	if c&0x80 != 0 {
-		return 0, errors.New("sbc/msgpack: only accept positive int")
+		return 0, ErrUnpackMsgPack
 	}
 	return uint(c), nil
 }
@@ -75,7 +74,7 @@ func (d *Decoder) ReadBinary() ([]byte, error) {
 		size := binary.BigEndian.Uint16(n)
 		return d.read(int(size))
 	}
-	return nil, errors.New("sbc/msgpack: invalid binary data")
+	return nil, ErrUnpackMsgPack
 }
 
 func (d *Decoder) ReadString() (string, error) {
@@ -84,7 +83,7 @@ func (d *Decoder) ReadString() (string, error) {
 		return "", err
 	}
 	if (c>>0x5)&0x07 != 0x5 {
-		return "", errors.New("err")
+		return "", ErrUnpackMsgPack
 	}
 	size := int(c & 0x1F)
 	str, err := d.read(size)
@@ -97,22 +96,22 @@ func (d *Decoder) ReadString() (string, error) {
 func (d *Decoder) ReadArray() (int, error) {
 	c, err := d.byte()
 	if err != nil {
-		return -1, errors.New("error while reading array")
+		return -1, ErrUnpackMsgPack
 	}
 	if (c & 0xF0) == 0x90 {
 		return int(c & 0x0F), nil
 	}
 	if c != 0xDD && c != 0xDC {
-		return -1, errors.New("error while reading array")
+		return -1, ErrUnpackMsgPack
 	}
 	size, err := d.read(1)
 	if err != nil {
-		return -1, errors.New("error while reading array")
+		return -1, ErrUnpackMsgPack
 	}
 	if c == 0xDD {
-		v6 := binary.BigEndian.Uint32(size)
-		return int(v6), nil
+		v := binary.BigEndian.Uint32(size)
+		return int(v), nil
 	}
-	v6 := binary.BigEndian.Uint16(size)
-	return int(v6), nil
+	v := binary.BigEndian.Uint16(size)
+	return int(v), nil
 }
