@@ -24,19 +24,11 @@ type BackupKeys struct {
 }
 
 func makeRestoreBackupKeys(seed, key, payload []byte) (*BackupKeys, error) {
-	rs, err := deriveKey(seed, nil, "RESTORE_SEED", 0x20)
+	decryptedKey, err := decryptRecoveryKey(seed, key)
 	if err != nil {
 		return nil, err
 	}
-	recoveryKey, err := unmarshalRecoveryKey(key)
-	if err != nil {
-		return nil, err
-	}
-	out, err := aesCTRCrypto(rs[:0x10], rs[0x10:], recoveryKey)
-	if err != nil {
-		return nil, err
-	}
-	bs, err := deriveKey(out, nil, "BACKUP_SEED", 0x1c)
+	bs, err := deriveKey(decryptedKey, nil, "BACKUP_SEED", 0x1c)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +48,22 @@ func makeRestoreBackupKeys(seed, key, payload []byte) (*BackupKeys, error) {
 	if err != nil {
 		return nil, err
 	}
+	return generateBackupKeys(section, blob, pin)
+}
 
+func decryptRecoveryKey(seed, key []byte) ([]byte, error) {
+	rs, err := deriveKey(seed, nil, "RESTORE_SEED", 0x20)
+	if err != nil {
+		return nil, err
+	}
+	recoverKey, err := unmarshalRecoveryKey(key)
+	if err != nil {
+		return nil, err
+	}
+	return aesCTRCrypto(rs[:0x10], rs[0x10:], recoverKey)
+}
+
+func generateBackupKeys(section [][]byte, payload *blobPayload, pin string) (*BackupKeys, error) {
 	size := len(section)
 	keys := make(E2eeKeys, 0, size)
 
@@ -66,7 +73,7 @@ func makeRestoreBackupKeys(seed, key, payload []byte) (*BackupKeys, error) {
 			return nil, err
 		}
 		keys = append(keys, &E2eeKey{
-			KeyID:   blob.MetaData[i],
+			KeyID:   payload.MetaData[i],
 			E2eeKey: &data,
 		})
 	}
@@ -75,9 +82,8 @@ func makeRestoreBackupKeys(seed, key, payload []byte) (*BackupKeys, error) {
 
 	backupKeys.E2eeKeys = keys
 
-	if blob.isMigration {
+	if payload.isMigration && len(pin) != 0 {
 		backupKeys.Passcode = pin
 	}
-
 	return &backupKeys, nil
 }
