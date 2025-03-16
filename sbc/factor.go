@@ -2,36 +2,43 @@ package sbc
 
 import (
 	"errors"
+)
 
-	"github.com/q0jt/line-sbc/sbc/types"
+type FactorType int
+
+const (
+	FactorTypePassword FactorType = iota
+	FactorTypeRecoveryCode
 )
 
 type SecretFactor struct {
-	factorType types.FactorType
+	mid        string
+	factorType FactorType
 }
 
-func NewSecretFactor(factorType types.FactorType, cred, mid string) ([]byte, error) {
+func NewSecretFactor(factorType FactorType, cred, mid string) ([]byte, error) {
 	if !validateMid(mid) {
 		return nil, errors.New("sbc: invalid mid")
 	}
-	factor, err := newSecretFactorFromFactorType(factorType)
+	factor, err := newSecretFactorFromType(factorType)
 	if err != nil {
 		return nil, err
 	}
-	return factor.generateCredential(cred, mid), nil
+	factor.mid = mid
+	return factor.generateCredential(cred), nil
 }
 
-func newSecretFactorFromFactorType(factorType types.FactorType) (*SecretFactor, error) {
-	if factorType != types.FactorTypePassword && factorType != types.FactorTypeRecoveryCode {
+func newSecretFactorFromType(factorType FactorType) (*SecretFactor, error) {
+	if factorType != FactorTypePassword && factorType != FactorTypeRecoveryCode {
 		return nil, errors.New("sbc: unsupported factor type")
 	}
 	return &SecretFactor{factorType: factorType}, nil
 }
 
-func (f *SecretFactor) generateCredential(cred, mid string) []byte {
+func (f *SecretFactor) generateCredential(cred string) []byte {
 	info := "V2_ARGON2_RECOVERY"
-	if f.factorType == types.FactorTypePassword {
+	if f.factorType == FactorTypePassword {
 		info = "V2_ARGON2_PASSWORD"
 	}
-	return hashPasswordArgon2id([]byte(cred), mid, info)
+	return hashPasswordArgon2id([]byte(cred), f.mid, info)
 }
