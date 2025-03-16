@@ -2,8 +2,6 @@ package sbc
 
 import (
 	"encoding/json"
-
-	"github.com/q0jt/line-sbc/sbc/internal/msgpack"
 )
 
 type E2eeKeyData struct {
@@ -30,11 +28,11 @@ func makeRestoreBackupKeys(seed, key, payload []byte) (*BackupKeys, error) {
 	if err != nil {
 		return nil, err
 	}
-	rk, err := msgpack.UnpackRecoveryKey(key)
+	recoveryKey, err := unmarshalRecoveryKey(key)
 	if err != nil {
 		return nil, err
 	}
-	out, err := aesCTRCrypto(rs[:0x10], rs[0x10:], rk)
+	out, err := aesCTRCrypto(rs[:0x10], rs[0x10:], recoveryKey)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +40,7 @@ func makeRestoreBackupKeys(seed, key, payload []byte) (*BackupKeys, error) {
 	if err != nil {
 		return nil, err
 	}
-	blob, err := msgpack.UnpackBlobPayload(payload)
+	blob, err := unmarshalBlobPayload(payload)
 	if err != nil {
 		return nil, err
 	}
@@ -50,11 +48,11 @@ func makeRestoreBackupKeys(seed, key, payload []byte) (*BackupKeys, error) {
 	if err != nil {
 		return nil, err
 	}
-	plaintext, err := aeadDecrypt(bs[:0x10], bs[0x10:], blob.Payload, aad)
+	plaintext, err := aeadDecrypt(bs[:0x10], bs[0x10:], blob.EncryptedSection, aad)
 	if err != nil {
 		return nil, err
 	}
-	section, pin, err := msgpack.UnpackEncryptSection(plaintext, blob.ContainsPin())
+	section, pin, err := unmarshalEncryptSection(plaintext, blob.isMigration)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +75,7 @@ func makeRestoreBackupKeys(seed, key, payload []byte) (*BackupKeys, error) {
 
 	backupKeys.E2eeKeys = keys
 
-	if blob.ContainsPin() {
+	if blob.isMigration {
 		backupKeys.Passcode = pin
 	}
 
