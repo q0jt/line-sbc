@@ -22,7 +22,7 @@ func deriveKey(key, salt []byte, info string, size int) ([]byte, error) {
 }
 
 func generateKeyFromPassword(passwd []byte, mid, ad string) []byte {
-	return argon2.IDKeyWithAAD(
+	return argon2.IDKeyWithAssociatedData(
 		passwd, []byte(mid), []byte(ad), 4, 128*1024, 4, 0x10)
 }
 
