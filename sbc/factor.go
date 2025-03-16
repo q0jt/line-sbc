@@ -33,5 +33,5 @@ func (f *SecretFactor) generateCredential(cred, mid string) []byte {
 	if f.factorType == types.FactorTypePassword {
 		info = "V2_ARGON2_PASSWORD"
 	}
-	return argon2id([]byte(cred), []byte(mid), info)
+	return generateKeyFromPassword([]byte(cred), mid, info)
 }

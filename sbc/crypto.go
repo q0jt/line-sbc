@@ -21,9 +21,9 @@ func deriveKey(key, salt []byte, info string, size int) ([]byte, error) {
 	return hkdf.Key(sha256.New, key, salt, info, size)
 }
 
-func argon2id(pwd []byte, mid, aad string) []byte {
+func generateKeyFromPassword(passwd []byte, mid, ad string) []byte {
 	return argon2.IDKeyWithAAD(
-		pwd, []byte(mid), []byte(aad), 4, 128*1024, 4, 0x10)
+		passwd, []byte(mid), []byte(ad), 4, 128*1024, 4, 0x10)
 }
 
 func generateEphemeralKey() (*ecdh.PrivateKey, error) {
@@ -51,15 +51,15 @@ func stripP256PubKeyPrefix(key []byte) []byte {
 	return key[1:]
 }
 
-func cryptoAesCTR(key, iv, src []byte) ([]byte, error) {
+func aesCTRCrypto(key, iv, src []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}
-	ciphertext := make([]byte, len(src))
+	dst := make([]byte, len(src))
 	stream := cipher.NewCTR(block, iv)
-	stream.XORKeyStream(ciphertext, src)
-	return ciphertext, nil
+	stream.XORKeyStream(dst, src)
+	return dst, nil
 }
 
 func aeadEncrypt(key, nonce, src, aad []byte) ([]byte, error) {

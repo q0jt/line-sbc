@@ -34,7 +34,7 @@ func makeRestoreBackupKeys(seed, key, payload []byte) (*BackupKeys, error) {
 	if err != nil {
 		return nil, err
 	}
-	out, err := cryptoAesCTR(rs[:0x10], rs[0x10:], rk)
+	out, err := aesCTRCrypto(rs[:0x10], rs[0x10:], rk)
 	if err != nil {
 		return nil, err
 	}

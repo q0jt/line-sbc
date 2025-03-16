@@ -68,7 +68,7 @@ func makeRestoreClaim(mid, passcode string, timestamp int64, pk *ecdh.PublicKey)
 		return nil, err
 	}
 
-	pin := argon2id([]byte(passcode), mid, "ARGON2_PIN")
+	pin := generateKeyFromPassword([]byte(passcode), mid, "ARGON2_PIN")
 
 	aad := make([]byte, 8)
 	binary.BigEndian.PutUint64(aad, uint64(timestamp))
@@ -95,7 +95,7 @@ func wrapBackupECDHKey(pk *ecdh.PublicKey, seed []byte, info string) (*msgpack.K
 	if err != nil {
 		return nil, nil, err
 	}
-	enc, err := cryptoAesCTR(cs[:0x10], cs[0x10:], seed)
+	enc, err := aesCTRCrypto(cs[:0x10], cs[0x10:], seed)
 	if err != nil {
 		return nil, nil, err
 	}
