@@ -6,8 +6,6 @@ import (
 	"errors"
 	"os"
 	"time"
-
-	"github.com/q0jt/line-sbc/sbc/internal/msgpack"
 )
 
 type RestoreClaim struct {
@@ -68,17 +66,17 @@ func makeRestoreClaim(mid, passcode string, timestamp int64, pk *ecdh.PublicKey)
 		return nil, err
 	}
 
-	pin := hashPasswordArgon2id([]byte(passcode), mid, "ARGON2_PIN")
+	hashed := hashPasswordArgon2id([]byte(passcode), mid, "ARGON2_PIN")
 
 	aad := make([]byte, 8)
 	binary.BigEndian.PutUint64(aad, uint64(timestamp))
 
-	ciphertext, err := aeadEncrypt(seed[:0x10], seed[0x10:], pin, aad)
+	ciphertext, err := aeadEncrypt(seed[:0x10], seed[0x10:], hashed, aad)
 	if err != nil {
 		return nil, err
 	}
 
-	claim, err := msgpack.EncodeClaim(warpKey, tempKey, ciphertext, timestamp)
+	claim, err := marshalClaim(warpKey, tempKey, ciphertext, timestamp)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +84,7 @@ func makeRestoreClaim(mid, passcode string, timestamp int64, pk *ecdh.PublicKey)
 	return newRestoreClaim(claim, rng), nil
 }
 
-func wrapBackupECDHKey(pk *ecdh.PublicKey, seed []byte, info string) (*msgpack.KeyWrap, []byte, error) {
+func wrapBackupECDHKey(pk *ecdh.PublicKey, seed []byte, info string) ([]byte, []byte, error) {
 	key, secret, err := generateShardSecret(pk)
 	if err != nil {
 		return nil, nil, err
@@ -101,7 +99,11 @@ func wrapBackupECDHKey(pk *ecdh.PublicKey, seed []byte, info string) (*msgpack.K
 	}
 
 	certKey := stripP256PubKeyPrefix(pk.Bytes())
-	wrap := msgpack.NewKeyWrap(certKey, enc)
+
+	wrap, err := marshalKeyWrap(certKey, enc)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return wrap, key, nil
 }

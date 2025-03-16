@@ -46,7 +46,7 @@ func makeRestoreBackupKeys(seed, key, payload []byte) (*BackupKeys, error) {
 	if err != nil {
 		return nil, err
 	}
-	aad, err := msgpack.EncodeBlobPayloadMetaData(blob)
+	aad, err := marshalBlobPayloadMetaData(blob)
 	if err != nil {
 		return nil, err
 	}
