@@ -62,26 +62,26 @@ func cryptoAesCTR(key, iv, src []byte) ([]byte, error) {
 	return ciphertext, nil
 }
 
-func encryptAesGCM(key, nonce, src, aad []byte) ([]byte, error) {
+func aeadEncrypt(key, nonce, src, aad []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}
-	gcm, err := cipher.NewGCM(block)
+	aead, err := cipher.NewGCM(block)
 	if err != nil {
 		return nil, err
 	}
-	return gcm.Seal(nil, nonce, src, aad), nil
+	return aead.Seal(nil, nonce, src, aad), nil
 }
 
-func decryptAesGCM(key, nonce, src, aad []byte) ([]byte, error) {
+func aeadDecrypt(key, nonce, src, aad []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}
-	gcm, err := cipher.NewGCM(block)
+	aead, err := cipher.NewGCM(block)
 	if err != nil {
 		return nil, err
 	}
-	return gcm.Open(nil, nonce, src, aad)
+	return aead.Open(nil, nonce, src, aad)
 }

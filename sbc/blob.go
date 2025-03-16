@@ -50,7 +50,7 @@ func makeRestoreBackupKeys(seed, key, payload []byte) (*BackupKeys, error) {
 	if err != nil {
 		return nil, err
 	}
-	plaintext, err := decryptAesGCM(bs[:0x10], bs[0x10:], blob.Payload, aad)
+	plaintext, err := aeadDecrypt(bs[:0x10], bs[0x10:], blob.Payload, aad)
 	if err != nil {
 		return nil, err
 	}

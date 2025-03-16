@@ -58,7 +58,7 @@ func makeRestoreClaim(mid, passcode string, timestamp int64, pk *ecdh.PublicKey)
 		return nil, err
 	}
 
-	wrap, tempKey, err := wrapBackupECDHKey(pk, rng, "CLAIM_SHARED")
+	warpKey, tempKey, err := wrapBackupECDHKey(pk, rng, "CLAIM_SHARED")
 	if err != nil {
 		return nil, err
 	}
@@ -73,12 +73,12 @@ func makeRestoreClaim(mid, passcode string, timestamp int64, pk *ecdh.PublicKey)
 	aad := make([]byte, 8)
 	binary.BigEndian.PutUint64(aad, uint64(timestamp))
 
-	ciphertext, err := encryptAesGCM(seed[:0x10], seed[0x10:], pin, aad)
+	ciphertext, err := aeadEncrypt(seed[:0x10], seed[0x10:], pin, aad)
 	if err != nil {
 		return nil, err
 	}
 
-	claim, err := msgpack.EncodeClaim(wrap, tempKey, ciphertext, timestamp)
+	claim, err := msgpack.EncodeClaim(warpKey, tempKey, ciphertext, timestamp)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +101,6 @@ func wrapBackupECDHKey(pk *ecdh.PublicKey, seed []byte, info string) (*msgpack.K
 	}
 
 	certKey := stripP256PubKeyPrefix(pk.Bytes())
-
 	wrap := msgpack.NewKeyWrap(certKey, enc)
 
 	return wrap, key, nil
