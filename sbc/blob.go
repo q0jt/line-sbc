@@ -78,12 +78,10 @@ func generateBackupKeys(section [][]byte, payload *blobPayload, pin string) (*Ba
 		})
 	}
 
-	var backupKeys BackupKeys
-
-	backupKeys.E2eeKeys = keys
-
-	if payload.isMigration && len(pin) != 0 {
-		backupKeys.Passcode = pin
+	backupKeys := BackupKeys{
+		E2eeKeys: keys,
+		Passcode: pin,
 	}
+
 	return &backupKeys, nil
 }
