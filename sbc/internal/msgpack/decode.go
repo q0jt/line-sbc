@@ -4,91 +4,62 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"github.com/q0jt/line-sbc/sbc/types"
 )
 
-var (
-	ErrUnpack            = errors.New("msgpack unpack failure")
-	ErrUnpackRecoveryKey = errors.New("recovery key unpack failed")
-)
-
-type decoder struct {
-	buf *bytes.Reader
-	off int
+type Decoder struct {
+	reader *bytes.Reader
 }
 
-func newDecoder(b []byte) *decoder {
-	return &decoder{buf: bytes.NewReader(b)}
+func NewDecoder(b []byte) *Decoder {
+	r := bytes.NewReader(b)
+	return &Decoder{reader: r}
 }
 
-func (d *decoder) magic() (byte, error) {
-	return d.buf.ReadByte()
-}
-
-func (d *decoder) read(size int) ([]byte, error) {
-	out := make([]byte, size)
-	if _, err := d.buf.Read(out); err != nil {
+func (d *Decoder) read(size int) ([]byte, error) {
+	b := make([]byte, size)
+	if _, err := d.reader.Read(b); err != nil {
 		return nil, err
 	}
-	return out, nil
+	return b, nil
 }
 
-func (d *decoder) unpackArray() int {
-	magic, err := d.magic()
-	if err != nil {
-		return -1
-	}
-	if (magic & 0xF0) == 0x90 {
-		return int(magic & 0x0F)
-	}
-	if magic != 0xDD && magic != 0xDC {
-		return -1
-	}
-	size, err := d.read(1)
-	if err != nil {
-		return -1
-	}
-	if magic == 0xDD {
-		v6 := binary.BigEndian.Uint32(size)
-		d.off += 4
-		return int(v6)
-	}
-	v6 := binary.BigEndian.Uint16(size)
-	d.off += 2
-	return int(v6)
+func (d *Decoder) byte() (byte, error) {
+	return d.reader.ReadByte()
 }
 
-func (d *decoder) unpackUint() (uint, error) {
-	c, err := d.read(1)
+func (d *Decoder) ReadUint() (uint, error) {
+	c, err := d.byte()
 	if err != nil {
 		return 0, err
 	}
-	if c[0]&0x80 != 0 {
+	if c&0x80 != 0 {
 		return 0, errors.New("sbc/msgpack: only accept positive int")
 	}
-	return uint(c[0]), nil
+	return uint(c), nil
 }
 
-func decodeUint(b []byte) (uint, error) {
-	if len(b) == 0 {
-		return 0, errors.New("invalid buffer size")
+func (d *Decoder) ReadInt32() (int32, error) {
+	c, err := d.byte()
+	if err != nil {
+		return 0, err
 	}
-	if b[0]&0x80 != 0 {
-		return 0, errors.New("only accept positive int")
+	if c != 0xce {
+		return 0, err
 	}
-	return uint(b[0]), nil
+	cc, err := d.read(4)
+	if err != nil {
+		return 0, err
+	}
+	v := binary.BigEndian.Uint32(cc)
+	return int32(v), nil
 }
 
-func unpackUint16(b []byte) uint16 {
-	return binary.BigEndian.Uint16(b)
-}
-
-func (d *decoder) unpackBin() ([]byte, error) {
-	c, err := d.read(1)
+func (d *Decoder) ReadBinary() ([]byte, error) {
+	c, err := d.byte()
 	if err != nil {
 		return nil, err
 	}
-	switch c[0] {
+	switch c {
 	case 0xc4:
 		n, err := d.read(1)
 		if err != nil {
@@ -101,21 +72,21 @@ func (d *decoder) unpackBin() ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		size := unpackUint16(n)
+		size := binary.BigEndian.Uint16(n)
 		return d.read(int(size))
 	}
-	return nil, errors.New("sbc/pack.go: invalid data")
+	return nil, errors.New("sbc/msgpack: invalid binary data")
 }
 
-func (d *decoder) unpackString() (string, error) {
-	c, err := d.read(1)
+func (d *Decoder) ReadString() (string, error) {
+	c, err := d.byte()
 	if err != nil {
 		return "", err
 	}
-	if (c[0]>>0x5)&0x07 != 0x5 {
+	if (c>>0x5)&0x07 != 0x5 {
 		return "", errors.New("err")
 	}
-	size := int(c[0] & 0x1F)
+	size := int(c & 0x1F)
 	str, err := d.read(size)
 	if err != nil {
 		return "", err
@@ -123,141 +94,25 @@ func (d *decoder) unpackString() (string, error) {
 	return string(str), nil
 }
 
-func (d *decoder) unpackInt32() int32 {
-	c, err := d.read(1)
+func (d *Decoder) ReadArray() (int, error) {
+	c, err := d.byte()
 	if err != nil {
-		return -1
+		return -1, errors.New("error while reading array")
 	}
-	if c[0] != 0xce {
-		return -1
+	if (c & 0xF0) == 0x90 {
+		return int(c & 0x0F), nil
 	}
-	cc, err := d.read(4)
+	if c != 0xDD && c != 0xDC {
+		return -1, errors.New("error while reading array")
+	}
+	size, err := d.read(1)
 	if err != nil {
-		return -1
+		return -1, errors.New("error while reading array")
 	}
-	v := binary.BigEndian.Uint32(cc)
-	return int32(v)
-}
-
-func (d *decoder) unpackRecoveryKey() ([]byte, error) {
-	size := d.unpackArray()
-	if size != 2 {
-		return nil, errors.New("error")
+	if c == 0xDD {
+		v6 := binary.BigEndian.Uint32(size)
+		return int(v6), nil
 	}
-	objType, err := d.unpackUint()
-	if err != nil {
-		return nil, err
-	}
-	if objType != 1 {
-		return nil, errors.New("eer")
-	}
-	return d.unpackBin()
-}
-
-func UnpackRecoveryKey(b []byte) ([]byte, error) {
-	decoder := newDecoder(b)
-	key, err := decoder.unpackRecoveryKey()
-	if err != nil {
-		return nil, err
-	}
-	if len(key) != 0x10 {
-		return nil, ErrUnpackRecoveryKey
-	}
-	return key, nil
-}
-
-type BlobPayload struct {
-	MetaData []int32
-	Payload  []byte
-
-	isMigration bool
-}
-
-func (p *BlobPayload) ContainsPin() bool {
-	return p.isMigration
-}
-
-func (d *decoder) unpackBlobPayload() (*BlobPayload, error) {
-	if d.unpackArray() != 3 {
-		return nil, errors.New("sbc/msgpack: invalid array length")
-	}
-	objType, err := d.unpackUint()
-	if err != nil {
-		return nil, errors.New("sbc/msgpack: ")
-	}
-	if objType != 1 {
-		return nil, errors.New("sbc/msgpack: backup keys contained an unknown object type")
-	}
-
-	metaContainerSize := d.unpackArray()
-	keyIds := make([]int32, metaContainerSize)
-
-	var payload BlobPayload
-
-	for i := 0; i < metaContainerSize; i++ {
-		v := d.unpackArray()
-		keyType, err := d.unpackUint()
-		if err != nil {
-			return nil, err
-		}
-		switch types.BackupKeyType(keyType) {
-		case types.KeyTypeE2eeKey:
-			if v != 2 {
-				return nil, errors.New("sbc/msgpack: invalid data")
-			}
-			keyIds[i] = d.unpackInt32()
-		case types.KeyTypeBackupPin:
-			payload.isMigration = true
-		case types.KeyTypeBackupMasterKey:
-		}
-	}
-
-	src, err := d.unpackBin()
-	if err != nil {
-		return nil, err
-	}
-
-	if payload.isMigration {
-		keyIds = keyIds[:len(keyIds)-1]
-	}
-
-	payload.MetaData = keyIds
-	payload.Payload = src
-
-	return &payload, nil
-}
-
-func (d *decoder) unpackEncryptSection(mig bool) ([][]byte, string, error) {
-	size := d.unpackArray()
-	if size == 0 {
-		return nil, "", errors.New("error")
-	}
-	if mig {
-		size--
-	}
-	containers := make([][]byte, size)
-	for i := 0; i < size; i++ {
-		data, err := d.unpackBin()
-		if err != nil {
-			return nil, "", err
-		}
-		containers[i] = data
-	}
-	if !mig {
-		return containers, "", nil
-	}
-	pin, err := d.unpackString()
-	if err != nil {
-		return nil, "", err
-	}
-	return containers, pin, nil
-}
-func UnpackEncryptSection(b []byte, mig bool) ([][]byte, string, error) {
-	decoder := newDecoder(b)
-	return decoder.unpackEncryptSection(mig)
-}
-
-func UnpackBlobPayload(b []byte) (*BlobPayload, error) {
-	decoder := newDecoder(b)
-	return decoder.unpackBlobPayload()
+	v6 := binary.BigEndian.Uint16(size)
+	return int(v6), nil
 }
