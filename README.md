@@ -14,15 +14,15 @@ go get -u github.com/q0jt/line-sbc
 ```
 E2EEKeyBackupService
 
-// Intel SGX base
-cert = getE2EEKeyBackupCertificates()
-GET https://obs.line-scdn.net/{cert}
+// Intel SGX(Software Guard Extensions) base
+certificateId = getE2EEKeyBackupCertificates()
+GET https://obs.line-scdn.net/{certificateId}
 
 E2eeKeyBackupCertificateService
 
-// HSM base
-cert = getKeyBackupCertificatesV2()
-GET https://obs.line-scdn.net/{cert}
+// Hardware Security Module(HSM) base
+certificateId = getKeyBackupCertificatesV2()
+GET https://obs.line-scdn.net/{certificateId}
 ```
 
 ### Getting started
@@ -42,6 +42,7 @@ keys, err := claim.Restore(restore.RecoveryKey, restore.BlobPayload)
 if err != nil {
 	// error
 }
+// Only when migrated to another device and when PIN is registered
 fmt.Println("pin: ", keys.Passcode)
 for _, key := range keys.LetterSealingKeys {
     fmt.Printf("key id: %d\n", key.KeyID)
