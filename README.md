@@ -26,8 +26,7 @@ GET https://obs.line-scdn.net/{certificateId}
 ```
 
 ### Getting started
-<img width="350" src="./assets/images/backup_pin.png"/>
-
+1. Decrypt backup keys from backup PIN
 ```go
 // CreateFromPin("uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", "123456", "server-LNSGXTE1505.backup.security.linecorp.com.pem")
 claim, err := sbc.CreateFromPin("mid", "backup PIN", "cert path")
@@ -47,6 +46,15 @@ fmt.Println("pin: ", keys.Passcode)
 for _, key := range keys.LetterSealingKeys {
     fmt.Printf("key id: %d\n", key.KeyID)
     fmt.Printf("private key: %s\n", key.E2eeKey.PrivateKey)
+}
+```
+
+2. Decrypt backup keys from seed
+```go
+claim := sbc.CreateClaimFromSharedSecret(seed)
+keys, err := claim.Restore(key, payload)
+if err != nil {
+    // error
 }
 ```
 
