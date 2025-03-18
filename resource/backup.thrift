@@ -98,6 +98,10 @@ struct AddLifetimeKeyBackupPayloadDataListResponse {
     1: list<LifetimeBackupFailedPayload> failedPayloads;
 }
 
+struct UpdateLifetimeKeyBackupHeaderRequest {
+    1: binary blobHeader;
+}
+
 struct GetLifetimeKeyBackupPayloadDataListRequest {
     1: list<LifetimePayloadData> metadataList;
 }
@@ -164,6 +168,10 @@ service E2EELifetimeKeyBackupService {
 
     AddLifetimeKeyBackupPayloadDataListResponse addLifetimeKeyBackupPayloadDataList(
         2: AddLifetimeKeyBackupPayloadDataListRequest request
+    ) throws(1: E2EEKeyBackupException e);
+
+    void updateLifetimeKeyBackupHeader(
+        2: UpdateLifetimeKeyBackupHeaderRequest request
     ) throws(1: E2EEKeyBackupException e);
 
     GetLifetimeKeyBackupPayloadDataListResponse getLifetimeKeyBackupPayloadDataList(

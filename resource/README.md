@@ -1,4 +1,4 @@
-### How To Generate
+### Build
 ```shell
 mkdir service # any directory
 thrift --out service --gen go:skip_remote backup.thrift
@@ -22,8 +22,9 @@ thrift --out service --gen go:skip_remote backup.thrift
   - restoreLifetimeKeyBackupHeader
   - validateLifetimeKeyBackupHeader
   - addLifetimeKeyBackupPayloadDataList
+  - updateLifetimeKeyBackupHeader
   - getLifetimeKeyBackupPayloadDataList
 
 > [!NOTE]
 > 
-> Based on Line iOS version 15 and Android version 15
+> Based on Line iOS version 15.0.0 and Android version 15.3.0
