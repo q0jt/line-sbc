@@ -56,11 +56,11 @@ func decryptRecoveryKey(seed, key []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	recoverKey, err := unmarshalRecoveryKey(key)
+	recoveryKey, err := unmarshalRecoveryKey(key)
 	if err != nil {
 		return nil, err
 	}
-	return aesCTRCrypto(rs[:0x10], rs[0x10:], recoverKey)
+	return aesCTRCrypto(rs[:0x10], rs[0x10:], recoveryKey)
 }
 
 func generateBackupKeys(section [][]byte, payload *blobPayload, pin string) (*BackupKeys, error) {
