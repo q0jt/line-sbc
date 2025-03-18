@@ -1,6 +1,14 @@
 package sbc
 
-import "regexp"
+import (
+	"errors"
+	"regexp"
+)
+
+var (
+	ErrInvalidMid      = errors.New("sbc: invalid mid")
+	ErrInvalidPasscode = errors.New("sbc: invalid passcode")
+)
 
 func validateMid(mid string) bool {
 	re := regexp.MustCompile(`u[0-9a-f]{32}`)

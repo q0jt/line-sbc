@@ -18,7 +18,7 @@ type SecretFactor struct {
 
 func NewSecretFactor(factorType FactorType, cred, mid string) ([]byte, error) {
 	if !validateMid(mid) {
-		return nil, errors.New("sbc: invalid mid")
+		return nil, ErrInvalidMid
 	}
 	factor, err := newSecretFactorFromType(factorType)
 	if err != nil {

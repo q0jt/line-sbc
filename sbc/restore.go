@@ -34,10 +34,10 @@ func CreateFromPinWithServerTime(mid, passcode, path string, timestamp int64) (*
 
 func createFromPin(mid, passcode, path string, timestamp int64, rel bool) (*RestoreClaim, error) {
 	if !validateMid(mid) {
-		return nil, errors.New("invalid mid")
+		return nil, ErrInvalidMid
 	}
 	if !validatePasscode(passcode) {
-		return nil, errors.New("invalid passcode")
+		return nil, ErrInvalidPasscode
 	}
 	cert, err := os.ReadFile(path)
 	if err != nil {
