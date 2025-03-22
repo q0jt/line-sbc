@@ -51,10 +51,7 @@ func createFromPin(mid, passcode, path string, timestamp int64, rel bool) (*Rest
 }
 
 func makeRestoreClaim(mid, passcode string, timestamp int64, pk *ecdh.PublicKey) (*RestoreClaim, error) {
-	rng, err := randomBytes(0x10)
-	if err != nil {
-		return nil, err
-	}
+	rng := randomBytes(0x10)
 
 	warpKey, tempKey, err := wrapBackupECDHKey(pk, rng, "CLAIM_SHARED")
 	if err != nil {
@@ -93,14 +90,14 @@ func wrapBackupECDHKey(pk *ecdh.PublicKey, seed []byte, info string) ([]byte, []
 	if err != nil {
 		return nil, nil, err
 	}
-	enc, err := aesCTRCrypto(cs[:0x10], cs[0x10:], seed)
+	ciphertext, err := aesCTRCrypto(cs[:0x10], cs[0x10:], seed)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	certKey := stripP256PubKeyPrefix(pk.Bytes())
 
-	wrap, err := marshalKeyWrap(certKey, enc)
+	wrap, err := marshalKeyWrap(certKey, ciphertext)
 	if err != nil {
 		return nil, nil, err
 	}

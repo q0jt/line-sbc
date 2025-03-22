@@ -11,10 +11,10 @@ import (
 	"github.com/q0jt/line-sbc/sbc/internal/argon2"
 )
 
-func randomBytes(size int) ([]byte, error) {
+func randomBytes(size int) []byte {
 	rng := make([]byte, size)
 	rand.Read(rng)
-	return rng, nil
+	return rng
 }
 
 func deriveKey(key, salt []byte, info string, size int) ([]byte, error) {
