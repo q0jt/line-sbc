@@ -9,6 +9,8 @@ import (
 	"errors"
 	"io/fs"
 	"path/filepath"
+
+	"github.com/q0jt/line-sbc/sbc/internal/sum"
 )
 
 //go:embed certs/*
@@ -56,6 +58,11 @@ func verifyServiceCert(cert *x509.Certificate, caType caType, rel bool) error {
 }
 
 func importCACert(caType caType, rel bool) ([]byte, error) {
+	err := sum.Verify(x509CACerts, "certs", "certs.sum")
+	if err != nil {
+		return nil, err
+	}
+
 	var name string
 	switch caType {
 	case caTypeSGX:
