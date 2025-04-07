@@ -53,7 +53,7 @@ func createFromPin(mid, passcode, path string, timestamp int64, rel bool) (*Rest
 func makeRestoreClaim(mid, passcode string, timestamp int64, pk *ecdh.PublicKey) (*RestoreClaim, error) {
 	rng := randomBytes(0x10)
 
-	warpKey, tempKey, err := wrapBackupECDHKey(pk, rng, "CLAIM_SHARED")
+	envelope, err := wrapBackupECDHKey(pk, rng, "CLAIM_SHARED")
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func makeRestoreClaim(mid, passcode string, timestamp int64, pk *ecdh.PublicKey)
 		return nil, err
 	}
 
-	claim, err := marshalClaim(warpKey, tempKey, ciphertext, timestamp)
+	claim, err := marshalClaim(envelope.wrapKey, envelope.tempKey, ciphertext, timestamp)
 	if err != nil {
 		return nil, err
 	}
@@ -81,28 +81,33 @@ func makeRestoreClaim(mid, passcode string, timestamp int64, pk *ecdh.PublicKey)
 	return newRestoreClaim(claim, rng), nil
 }
 
-func wrapBackupECDHKey(pk *ecdh.PublicKey, seed []byte, info string) ([]byte, []byte, error) {
+type keyEnvelope struct {
+	wrapKey []byte
+	tempKey []byte
+}
+
+func wrapBackupECDHKey(pk *ecdh.PublicKey, seed []byte, info string) (*keyEnvelope, error) {
 	key, secret, err := generateShardSecret(pk)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	cs, err := deriveKey(secret, nil, info, 0x20)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	ciphertext, err := aesCTRCrypto(cs[:0x10], cs[0x10:], seed)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	certKey := stripP256PubKeyPrefix(pk.Bytes())
 
-	wrap, err := marshalKeyWrap(certKey, ciphertext)
+	wrapKey, err := marshalKeyWrap(certKey, ciphertext)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return wrap, key, nil
+	return &keyEnvelope{wrapKey, key}, nil
 }
 
 func (c *RestoreClaim) Restore(key, payload []byte) (*BackupKeys, error) {
