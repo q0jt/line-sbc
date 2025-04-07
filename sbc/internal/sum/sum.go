@@ -42,10 +42,9 @@ func hashDir(src embed.FS, dir, excl string) (string, error) {
 
 	for _, f := range r {
 		name := f.Name()
-		if name == excl {
-			continue
+		if name != excl {
+			files = append(files, name)
 		}
-		files = append(files, name)
 	}
 
 	sort.Strings(files)
