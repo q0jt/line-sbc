@@ -10,6 +10,21 @@ var (
 	ErrInvalidPasscode = errors.New("sbc: invalid passcode")
 )
 
+type BackupKeyType int
+
+const (
+	BackupKeyTypeE2eeKey BackupKeyType = iota + 1
+	BackupKeyTypeBackupPin
+	BackupKeyTypeBackupMasterKey
+)
+
+type PayloadType int
+
+const (
+	PayloadTypeE2eeKey PayloadType = iota
+	PayloadTypeInitialFullSyncKey
+)
+
 func validateMid(mid string) bool {
 	re := regexp.MustCompile(`u[0-9a-f]{32}`)
 	return re.MatchString(mid)
