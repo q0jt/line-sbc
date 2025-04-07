@@ -107,7 +107,7 @@ func wrapBackupECDHKey(pk *ecdh.PublicKey, seed []byte, info string) (*keyEnvelo
 		return nil, err
 	}
 
-	return &keyEnvelope{wrapKey, key}, nil
+	return &keyEnvelope{wrapKey: wrapKey, tempKey: key}, nil
 }
 
 func (c *RestoreClaim) Restore(key, payload []byte) (*BackupKeys, error) {
