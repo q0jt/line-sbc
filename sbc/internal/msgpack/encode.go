@@ -34,15 +34,15 @@ func (e *Encoder) WriteArraySize(size uint8) {
 
 func (e *Encoder) WriteBinary(b []byte) {
 	size := len(b)
-	if size < (2^8)-1 {
+	if size < (1<<8)-1 {
 		e.writeByteDirect(0xc4)
 		e.writeByteDirect(byte(size))
-	} else if size < (2^16)-1 {
+	} else if size < (1<<16)-1 {
 		e.writeByteDirect(0xc5)
 		length := make([]byte, 2)
 		binary.LittleEndian.PutUint16(length, uint16(size))
 		e.WriteDirect(length)
-	} else if size < (2^32)-1 {
+	} else if size < (1<<32)-1 {
 		e.writeByteDirect(0xc6)
 		length := uint32ToBytes(uint32(size))
 		e.WriteDirect(length)
