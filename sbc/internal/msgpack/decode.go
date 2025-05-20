@@ -53,6 +53,22 @@ func (d *Decoder) ReadInt32() (int32, error) {
 	return int32(v), nil
 }
 
+func (d *Decoder) ReadUint64() (uint64, error) {
+	c, err := d.byte()
+	if err != nil {
+		return 0, err
+	}
+	if c != 0xcf {
+		return 0, err
+	}
+	data, err := d.read(8)
+	if err != nil {
+		return 0, err
+	}
+	v := binary.BigEndian.Uint64(data)
+	return v, nil
+}
+
 func (d *Decoder) ReadBinary() ([]byte, error) {
 	c, err := d.byte()
 	if err != nil {
