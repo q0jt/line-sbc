@@ -44,11 +44,11 @@ func makeRestoreBackupKeys(seed, key, payload []byte) (*BackupKeys, error) {
 	if err != nil {
 		return nil, err
 	}
-	section, pin, err := unmarshalEncryptSection(plaintext, blob.isMigration)
+	slots, err := unmarshalBackupKeySlots(plaintext, blob.isMigration)
 	if err != nil {
 		return nil, err
 	}
-	return generateBackupKeys(section, blob, pin)
+	return generateBackupKeys(slots.e2eeKeys, blob.MetaData, slots.pin)
 }
 
 func decryptRecoveryKey(seed, key []byte) ([]byte, error) {
@@ -63,17 +63,17 @@ func decryptRecoveryKey(seed, key []byte) ([]byte, error) {
 	return aesCTRCrypto(rs[:0x10], rs[0x10:], recoveryKey)
 }
 
-func generateBackupKeys(section [][]byte, payload *blobPayload, pin string) (*BackupKeys, error) {
-	size := len(section)
+func generateBackupKeys(slot [][]byte, ids []int32, pin string) (*BackupKeys, error) {
+	size := len(slot)
 	keys := make(E2eeKeys, 0, size)
 
 	for i := 0; i < size; i++ {
 		var data E2eeKeyData
-		if err := json.Unmarshal(section[i], &data); err != nil {
+		if err := json.Unmarshal(slot[i], &data); err != nil {
 			return nil, err
 		}
 		keys = append(keys, &E2eeKey{
-			KeyID:   payload.MetaData[i],
+			KeyID:   ids[i],
 			E2eeKey: &data,
 		})
 	}

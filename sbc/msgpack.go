@@ -2,7 +2,6 @@ package sbc
 
 import (
 	"errors"
-
 	"github.com/q0jt/line-sbc/sbc/internal/msgpack"
 )
 
@@ -123,6 +122,7 @@ func unmarshalBlobPayload(b []byte) (*blobPayload, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	keyIds := make([]int32, metaContainerSize)
 
 	var payload blobPayload
@@ -173,29 +173,40 @@ func unmarshalBlobPayload(b []byte) (*blobPayload, error) {
 	return &payload, nil
 }
 
-func unmarshalEncryptSection(b []byte, mig bool) ([][]byte, string, error) {
+type keySlots struct {
+	e2eeKeys  [][]byte
+	pin       string
+	masterKey []byte
+}
+
+func unmarshalBackupKeySlots(b []byte, mig bool) (*keySlots, error) {
 	decoder := msgpack.NewDecoder(b)
 	size, err := decoder.ReadArray()
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	if mig {
 		size--
 	}
-	containers := make([][]byte, size)
+
+	slots := keySlots{
+		e2eeKeys: make([][]byte, size),
+	}
+
 	for i := 0; i < size; i++ {
 		data, err := decoder.ReadBinary()
 		if err != nil {
-			return nil, "", err
+			return nil, err
 		}
-		containers[i] = data
+		slots.e2eeKeys[i] = data
 	}
 	if !mig {
-		return containers, "", nil
+		return &slots, nil
 	}
 	pin, err := decoder.ReadString()
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
-	return containers, pin, nil
+	slots.pin = pin
+	return &slots, nil
 }
