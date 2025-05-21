@@ -89,6 +89,7 @@ var (
 	ErrUnpackRecoveryKey   = errors.New("sbc/msgpack: recovery key unpack failed")
 	ErrUnpackRecoveryKeyV2 = errors.New("sbc/msgpack: recovery key version 2 unpack failed")
 	ErrUnpackBlobPayload   = errors.New("sbc/msgpack: blob payload unpack failed")
+	ErrUnpackBackupPayload = errors.New("sbc/msgpack: backup payload unpack failed")
 )
 
 func unmarshalRecoveryKey(b []byte) ([]byte, error) {
@@ -264,4 +265,58 @@ func unmarshalBackupKeySlots(b []byte, mig bool) (*keySlots, error) {
 	}
 	slots.pin = pin
 	return &slots, nil
+}
+
+type backupPayload struct {
+	payloadType uint
+	metaData    []uint64
+	challenge   []byte
+	data        []byte
+}
+
+func unmarshalBackupPayload(b []byte) (*backupPayload, error) {
+	decoder := msgpack.NewDecoder(b)
+	size, err := decoder.ReadArray()
+	if err != nil {
+		return nil, err
+	}
+	if size < 5 {
+		return nil, errors.New("sbc/msgpack: invalid data")
+	}
+	version, err := decoder.ReadUint()
+	if err != nil {
+		return nil, err
+	}
+	if version != 2 {
+		return nil, ErrUnpackBackupPayload
+	}
+	var payload backupPayload
+	pt, err := decoder.ReadUint()
+	if err != nil {
+		return nil, err
+	}
+	payload.payloadType = pt
+	for i := 0; i < 2; i++ {
+		timestamp, err := decoder.ReadUint64()
+		if err != nil {
+			return nil, err
+		}
+		payload.metaData = append(payload.metaData, timestamp)
+	}
+	if pt != 1 && pt != 2 {
+		return nil, ErrUnpackBackupPayload
+	}
+	if pt != 1 {
+		challenge, err := decoder.ReadBinary()
+		if err != nil {
+			return nil, err
+		}
+		payload.challenge = challenge
+		data, err := decoder.ReadBinary()
+		if err != nil {
+			return nil, err
+		}
+		payload.data = data
+	}
+	return &payload, nil
 }

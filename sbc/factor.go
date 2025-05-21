@@ -32,6 +32,10 @@ func (f *SecretFactor) RestoreClaim(path string) (*RestoreClaimV3, error) {
 	return createFromSecretFactor(f, timestamp, path, true)
 }
 
+func CreateClaimV3FromSeed(mid string, seed []byte) *RestoreClaimV3 {
+	return newRestoreClaimV3(mid, nil, seed)
+}
+
 func CreateFromPassword(mid, password string) (*SecretFactor, error) {
 	return newSecretFactor(mid, password, factorTypePassword)
 }
@@ -121,5 +125,15 @@ func (v *RestoreClaimV3) Claim() []byte {
 	return v.claim
 }
 
-func (v *RestoreClaimV3) Restore() {
+func (v *RestoreClaimV3) Restore(key, payload []byte) (*PayloadContent, error) {
+	if len(v.Seed()) == 0 {
+		return nil, errors.New("sbc: invalid seed size")
+	}
+	if len(key) == 0 {
+		return nil, errors.New("sbc: invalid key size")
+	}
+	if len(payload) == 0 {
+		return nil, errors.New("sbc: invalid payload size")
+	}
+	return decryptBackupPayload(v.seed, []byte(v.mid), key, payload)
 }
