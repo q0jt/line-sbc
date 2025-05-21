@@ -36,6 +36,25 @@ func marshalClaim(wrapKey, tempKey, pin []byte, timestamp int64) ([]byte, error)
 	return encoder.Buffer(), nil
 }
 
+func marshalClaimV3(mid, passwd []byte, envelope *keyEnvelope, timestamp int64) ([]byte, error) {
+	encoder := msgpack.NewEncoder()
+	encoder.WriteArraySize(7)
+	if err := encoder.WriteUint(3); err != nil {
+		return nil, err
+	}
+	encoder.WriteBinary(mid)
+	encoder.WriteUint64(uint64(timestamp))
+	encoder.WriteBinary(envelope.tempKey)
+	encoder.WriteArraySize(1)
+	encoder.WriteDirect(envelope.wrapKey)
+	// factorType
+	if err := encoder.WriteUint(1); err != nil {
+		return nil, err
+	}
+	encoder.WriteBinary(passwd)
+	return encoder.Buffer(), nil
+}
+
 func marshalBlobPayloadMetaData(payload *blobPayload) ([]byte, error) {
 	if payload == nil {
 		return nil, errors.New("sbc/msgpack: no blob payload")
@@ -67,8 +86,9 @@ func marshalBlobPayloadMetaData(payload *blobPayload) ([]byte, error) {
 }
 
 var (
-	ErrUnpackRecoveryKey = errors.New("sbc/msgpack: recovery key unpack failed")
-	ErrUnpackBlobPayload = errors.New("sbc/msgpack: blob payload unpack failed")
+	ErrUnpackRecoveryKey   = errors.New("sbc/msgpack: recovery key unpack failed")
+	ErrUnpackRecoveryKeyV2 = errors.New("sbc/msgpack: recovery key version 2 unpack failed")
+	ErrUnpackBlobPayload   = errors.New("sbc/msgpack: blob payload unpack failed")
 )
 
 func unmarshalRecoveryKey(b []byte) ([]byte, error) {
@@ -92,6 +112,41 @@ func unmarshalRecoveryKey(b []byte) ([]byte, error) {
 		return nil, ErrUnpackRecoveryKey
 	}
 	return key, nil
+}
+
+type recoveryKeyV2 struct {
+	timestamp    uint64
+	encryptedKey []byte
+}
+
+func unmarshalRecoveryKeyV2(b []byte) (*recoveryKeyV2, error) {
+	decoder := msgpack.NewDecoder(b)
+	size, err := decoder.ReadArray()
+	if err != nil {
+		return nil, err
+	}
+	if size != 3 {
+		return nil, ErrUnpackRecoveryKeyV2
+	}
+	version, err := decoder.ReadUint()
+	if err != nil {
+		return nil, err
+	}
+	timestamp, err := decoder.ReadUint64()
+	if err != nil {
+		return nil, err
+	}
+	key, err := decoder.ReadBinary()
+	if err != nil {
+		return nil, err
+	}
+	if version != 2 || len(key) != 0x20 {
+		return nil, ErrUnpackRecoveryKeyV2
+	}
+	return &recoveryKeyV2{
+		timestamp:    timestamp,
+		encryptedKey: key,
+	}, nil
 }
 
 type blobPayload struct {
