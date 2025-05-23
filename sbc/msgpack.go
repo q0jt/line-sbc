@@ -2,6 +2,7 @@ package sbc
 
 import (
 	"errors"
+
 	"github.com/q0jt/line-sbc/sbc/internal/msgpack"
 )
 
@@ -62,13 +63,11 @@ func marshalBlobPayloadMetaData(payload *blobPayload) ([]byte, error) {
 
 	encoder := msgpack.NewEncoder()
 
-	keyIds := payload.MetaData
+	keyIds := payload.e2eeKeyIds
 	size := len(keyIds)
-	isMig := payload.isMigration
-	if isMig {
-		size++
-	}
-	encoder.WriteArraySize(uint8(size))
+
+	encoder.WriteArraySize(uint8(size + payload.meta.extra()))
+
 	for _, keyId := range keyIds {
 		encoder.WriteArraySize(2)
 		if err := encoder.WriteUint(0x01); err != nil {
@@ -76,12 +75,22 @@ func marshalBlobPayloadMetaData(payload *blobPayload) ([]byte, error) {
 		}
 		encoder.WriteUint32(uint32(keyId))
 	}
-	if isMig {
+
+	if payload.meta.has(fieldBackupPin) {
 		encoder.WriteArraySize(1)
 		if err := encoder.WriteUint(2); err != nil {
 			return nil, err
 		}
 	}
+
+	if payload.meta.has(fieldMasterKey) {
+		encoder.WriteArraySize(2)
+		if err := encoder.WriteUint(0x03); err != nil {
+			return nil, err
+		}
+		encoder.WriteUint64(payload.timestamp)
+	}
+
 	return encoder.Buffer(), nil
 }
 
@@ -150,11 +159,39 @@ func unmarshalRecoveryKeyV2(b []byte) (*recoveryKeyV2, error) {
 	}, nil
 }
 
-type blobPayload struct {
-	MetaData         []int32
-	EncryptedSection []byte
+type field uint8
 
-	isMigration bool
+const (
+	fieldNone field = 0
+
+	fieldE2EEKey field = 1 << 0
+
+	fieldBackupPin field = 1 << 1
+	fieldMasterKey field = 1 << 2
+)
+
+func (f field) has(flag field) bool {
+	return f&flag != 0
+}
+
+func (f field) extra() int {
+	elem := 0
+	if f.has(fieldBackupPin) {
+		elem++
+	}
+	if f.has(fieldMasterKey) {
+		elem++
+	}
+	return elem
+}
+
+type blobPayload struct {
+	e2eeKeyIds []int32
+	timestamp  uint64
+
+	encryptedData []byte
+
+	meta field
 }
 
 func unmarshalBlobPayload(b []byte) (*blobPayload, error) {
@@ -174,16 +211,16 @@ func unmarshalBlobPayload(b []byte) (*blobPayload, error) {
 		return nil, errors.New("sbc/msgpack: backup keys contained an unknown object type")
 	}
 
-	metaContainerSize, err := decoder.ReadArray()
+	elemSize, err := decoder.ReadArray()
 	if err != nil {
 		return nil, err
 	}
 
-	keyIds := make([]int32, metaContainerSize)
+	keyIds := make([]int32, elemSize)
 
 	var payload blobPayload
 
-	for i := 0; i < metaContainerSize; i++ {
+	for i := 0; i < elemSize; i++ {
 		v, err := decoder.ReadArray()
 		if err != nil {
 			return nil, err
@@ -206,25 +243,29 @@ func unmarshalBlobPayload(b []byte) (*blobPayload, error) {
 			if v != 1 {
 				return nil, errors.New("sbc/msgpack: invalid data")
 			}
-			payload.isMigration = true
+			payload.meta |= fieldBackupPin
 		case BackupKeyTypeBackupMasterKey:
 			if v != 2 {
 				return nil, errors.New("sbc/msgpack: invalid data")
 			}
+			timestamp, err := decoder.ReadUint64()
+			if err != nil {
+				return nil, err
+			}
+			payload.timestamp = timestamp
+			payload.meta |= fieldMasterKey
 		}
 	}
 
-	enc, err := decoder.ReadBinary()
+	data, err := decoder.ReadBinary()
 	if err != nil {
 		return nil, err
 	}
 
-	if payload.isMigration {
-		keyIds = keyIds[:len(keyIds)-1]
-	}
+	keyIds = keyIds[:len(keyIds)-payload.meta.extra()]
 
-	payload.MetaData = keyIds
-	payload.EncryptedSection = enc
+	payload.e2eeKeyIds = keyIds
+	payload.encryptedData = data
 
 	return &payload, nil
 }
@@ -235,35 +276,47 @@ type keySlots struct {
 	masterKey []byte
 }
 
-func unmarshalBackupKeySlots(b []byte, mig bool) (*keySlots, error) {
+func unmarshalBackupKeySlots(b []byte, f field) (*keySlots, error) {
 	decoder := msgpack.NewDecoder(b)
 	size, err := decoder.ReadArray()
 	if err != nil {
 		return nil, err
 	}
-	if mig {
-		size--
-	}
+
+	keySize := size - f.extra()
 
 	slots := keySlots{
-		e2eeKeys: make([][]byte, size),
+		e2eeKeys: make([][]byte, keySize),
 	}
 
-	for i := 0; i < size; i++ {
-		data, err := decoder.ReadBinary()
+	for i := 0; i < keySize; i++ {
+		key, err := decoder.ReadBinary()
 		if err != nil {
 			return nil, err
 		}
-		slots.e2eeKeys[i] = data
+		slots.e2eeKeys[i] = key
 	}
-	if !mig {
+
+	if !f.has(fieldBackupPin | fieldMasterKey) {
 		return &slots, nil
 	}
-	pin, err := decoder.ReadString()
-	if err != nil {
-		return nil, err
+
+	if f.has(fieldBackupPin) {
+		pin, err := decoder.ReadString()
+		if err != nil {
+			return nil, err
+		}
+		slots.pin = pin
 	}
-	slots.pin = pin
+
+	if f.has(fieldMasterKey) {
+		masterKey, err := decoder.ReadBinary()
+		if err != nil {
+			return nil, err
+		}
+		slots.masterKey = masterKey
+	}
+
 	return &slots, nil
 }
 

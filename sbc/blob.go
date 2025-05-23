@@ -19,8 +19,17 @@ type E2eeKey struct {
 type E2eeKeys []*E2eeKey
 
 type BackupKeys struct {
-	E2eeKeys E2eeKeys
-	Passcode string
+	E2eeKeys  E2eeKeys
+	Passcode  string
+	MasterKey []byte
+}
+
+func (k *BackupKeys) HasPasscode() bool {
+	return len(k.Passcode) != 0
+}
+
+func (k *BackupKeys) HasMasterKey() bool {
+	return len(k.MasterKey) != 0
 }
 
 func makeRestoreBackupKeys(seed, key, payload []byte) (*BackupKeys, error) {
@@ -40,15 +49,15 @@ func makeRestoreBackupKeys(seed, key, payload []byte) (*BackupKeys, error) {
 	if err != nil {
 		return nil, err
 	}
-	plaintext, err := aeadDecrypt(bs[:0x10], bs[0x10:], blob.EncryptedSection, aad)
+	plaintext, err := aeadDecrypt(bs[:0x10], bs[0x10:], blob.encryptedData, aad)
 	if err != nil {
 		return nil, err
 	}
-	slots, err := unmarshalBackupKeySlots(plaintext, blob.isMigration)
+	slots, err := unmarshalBackupKeySlots(plaintext, blob.meta)
 	if err != nil {
 		return nil, err
 	}
-	return generateBackupKeys(slots.e2eeKeys, blob.MetaData, slots.pin)
+	return generateBackupKeys(slots, blob.e2eeKeyIds)
 }
 
 func decryptRecoveryKey(seed, key []byte) ([]byte, error) {
@@ -63,13 +72,13 @@ func decryptRecoveryKey(seed, key []byte) ([]byte, error) {
 	return aesCTRCrypto(rs[:0x10], rs[0x10:], recoveryKey)
 }
 
-func generateBackupKeys(slot [][]byte, ids []int32, pin string) (*BackupKeys, error) {
-	size := len(slot)
-	keys := make(E2eeKeys, 0, size)
+func generateBackupKeys(slots *keySlots, ids []int32) (*BackupKeys, error) {
+	keySize := len(slots.e2eeKeys)
+	keys := make(E2eeKeys, 0, keySize)
 
-	for i := 0; i < size; i++ {
+	for i := 0; i < keySize; i++ {
 		var data E2eeKeyData
-		if err := json.Unmarshal(slot[i], &data); err != nil {
+		if err := json.Unmarshal(slots.e2eeKeys[i], &data); err != nil {
 			return nil, err
 		}
 		keys = append(keys, &E2eeKey{
@@ -79,8 +88,9 @@ func generateBackupKeys(slot [][]byte, ids []int32, pin string) (*BackupKeys, er
 	}
 
 	backupKeys := BackupKeys{
-		E2eeKeys: keys,
-		Passcode: pin,
+		E2eeKeys:  keys,
+		Passcode:  slots.pin,
+		MasterKey: slots.masterKey,
 	}
 
 	return &backupKeys, nil
