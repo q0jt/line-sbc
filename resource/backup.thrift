@@ -58,13 +58,13 @@ struct SingleValueMetadata {
 }
 
 struct LifetimePayloadMetaData {
-    1: E2EEMetadata e2ee;
-    2: SingleValueMetadata singleValue;
+    1: optional E2EEMetadata e2ee;
+    2: optional SingleValueMetadata singleValue;
 }
 
 struct LifetimePayloadData {
     1: LifetimePayloadMetaData metadata;
-    2: binary blobPayload;
+    2: optional binary blobPayload;
 }
 
 struct CreateLifetimeKeyBackupRequest {
@@ -82,7 +82,7 @@ struct RestoreLifetimeKeyBackupHeaderResponse {
 
 struct ValidateLifetimeKeyBackupHeaderRequest {
     1: i64 masterKeyTimestamp;
-    2: binary blobHeaderHash;
+    2: optional binary blobHeaderHash;
 }
 
 struct AddLifetimeKeyBackupPayloadDataListRequest {
@@ -103,7 +103,7 @@ struct UpdateLifetimeKeyBackupHeaderRequest {
 }
 
 struct GetLifetimeKeyBackupPayloadDataListRequest {
-    1: list<LifetimePayloadData> metadataList;
+    1: list<LifetimePayloadMetaData> metadataList;
 }
 
 struct GetLifetimeKeyBackupPayloadDataListResponse {
