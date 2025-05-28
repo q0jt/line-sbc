@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+const masterKeySize = 0x10
+
 type factorType uint32
 
 const (
@@ -17,7 +19,7 @@ const (
 
 type SecretFactor struct {
 	mid        string
-	credential string
+	cred       string
 	factorType factorType
 }
 
@@ -28,7 +30,7 @@ type RestoreClaimV3 struct {
 }
 
 func (f *SecretFactor) RestoreClaim(path string) (*RestoreClaimV3, error) {
-	timestamp := time.Now().UnixMilli()
+	timestamp := uint64(time.Now().UnixMilli())
 	return createFromSecretFactor(f, timestamp, path, true)
 }
 
@@ -36,8 +38,12 @@ func CreateClaimV3FromSeed(mid string, seed []byte) *RestoreClaimV3 {
 	return newRestoreClaimV3(mid, nil, seed)
 }
 
-func CreateFromPassword(mid, password string) (*SecretFactor, error) {
-	return newSecretFactor(mid, password, factorTypePassword)
+func CreateFromPassword(mid, password, path string) (*RestoreClaimV3, error) {
+	factor, err := newSecretFactor(mid, password, factorTypePassword)
+	if err != nil {
+		return nil, err
+	}
+	return factor.RestoreClaim(path)
 }
 
 //func CreateFromRecoveryCode(mid, code string) (*SecretFactor, error) {
@@ -51,7 +57,7 @@ func newSecretFactor(mid, credential string, factorType factorType) (*SecretFact
 	factor := SecretFactor{
 		mid:        mid,
 		factorType: factorType,
-		credential: credential,
+		cred:       credential,
 	}
 	return &factor, nil
 }
@@ -61,10 +67,10 @@ func (f *SecretFactor) hashCredential() []byte {
 	if f.factorType != factorTypePassword {
 		info = "V2_ARGON2_RECOVERY"
 	}
-	return hashPasswordArgon2id([]byte(f.credential), f.mid, info)
+	return hashPasswordArgon2id([]byte(f.cred), f.mid, info)
 }
 
-func createFromSecretFactor(factor *SecretFactor, timestamp int64, path string, rel bool) (*RestoreClaimV3, error) {
+func createFromSecretFactor(factor *SecretFactor, timestamp uint64, path string, rel bool) (*RestoreClaimV3, error) {
 	if !validateMid(factor.mid) {
 		return nil, ErrInvalidMid
 	}
@@ -79,42 +85,59 @@ func createFromSecretFactor(factor *SecretFactor, timestamp int64, path string, 
 	return makeRestoreClaimV3(factor, timestamp, key)
 }
 
-func makeRestoreClaimV3(factor *SecretFactor, timestamp int64, pk *ecdh.PublicKey) (*RestoreClaimV3, error) {
-	rng := randomBytes(0x10)
+func makeRestoreClaimV3(factor *SecretFactor, timestamp uint64, pk *ecdh.PublicKey) (*RestoreClaimV3, error) {
+	seed := randomBytes(0x10)
 
-	envelope, err := wrapBackupECDHKey(pk, rng, "V2_CLAIM_SHARED")
+	envelope, err := wrapBackupECDHKey(pk, seed, "V2_CLAIM_SHARED")
 	if err != nil {
 		return nil, err
 	}
 
-	seed, err := deriveKey(rng, []byte(factor.mid), "V2_CLAIM_SEED", 0x1c)
+	cek, err := deriveKey(seed, []byte(factor.mid), "V2_CLAIM_SEED", 0x1c)
 	if err != nil {
 		return nil, err
 	}
 
-	// aad (0x6d bytes): version? 2 bytes || mid 0x21 bytes || timestamp 8 bytes || ephemeralKey 0x40 bytes || factorType 2 bytes
+	// aad (0x6d bytes): claim version? 2 bytes || mid 0x21 bytes ||
+	// timestamp 8 bytes || ephemeralKey 0x40 bytes || factorType 2 bytes
 	aad := make([]byte, 0, 0x6d)
 	aad = binary.LittleEndian.AppendUint16(aad, uint16(3))
 	aad = append(aad, []byte(factor.mid)...)
-	aad = binary.LittleEndian.AppendUint64(aad, uint64(timestamp))
+	aad = binary.LittleEndian.AppendUint64(aad, timestamp)
 	aad = append(aad, envelope.tempKey...)
 	aad = binary.LittleEndian.AppendUint16(aad, uint16(factor.factorType))
 
 	h := factor.hashCredential()
 
-	ciphertext, err := aeadEncrypt(seed[:0x10], seed[0x10:], h, aad)
+	ciphertext, err := aeadEncrypt(cek[:0x10], cek[0x10:], h, aad)
 	if err != nil {
 		return nil, err
 	}
-	claim, err := marshalClaimV3([]byte(factor.mid), ciphertext, envelope, timestamp)
+	claim, err := marshalClaimV3(envelope, []byte(factor.mid), ciphertext, uint8(factor.factorType), timestamp)
 	if err != nil {
 		return nil, err
 	}
-	return newRestoreClaimV3(factor.mid, claim, rng), nil
+	return newRestoreClaimV3(factor.mid, claim, seed), nil
 }
 
 func newRestoreClaimV3(mid string, claim, seed []byte) *RestoreClaimV3 {
 	return &RestoreClaimV3{mid: mid, claim: claim, seed: seed}
+}
+
+func (v *RestoreClaimV3) Restore(key, payload []byte) (*PayloadSecret, error) {
+	if len(key) == 0 {
+		return nil, errors.New("sbc: invalid key size")
+	}
+	if len(payload) == 0 {
+		return nil, errors.New("sbc: invalid payload size")
+	}
+	if len(key) != masterKeySize {
+		if len(v.seed) != 0 {
+			return decryptPayloadSecretFromRecoveryKey(v.seed, []byte(v.mid), key, payload)
+		}
+		return nil, errors.New("sbc: invalid seed size")
+	}
+	return decryptPayloadSecret(key, payload)
 }
 
 func (v *RestoreClaimV3) Seed() []byte {
@@ -123,17 +146,4 @@ func (v *RestoreClaimV3) Seed() []byte {
 
 func (v *RestoreClaimV3) Claim() []byte {
 	return v.claim
-}
-
-func (v *RestoreClaimV3) Restore(key, payload []byte) (*PayloadContent, error) {
-	if len(v.Seed()) == 0 {
-		return nil, errors.New("sbc: invalid seed size")
-	}
-	if len(key) == 0 {
-		return nil, errors.New("sbc: invalid key size")
-	}
-	if len(payload) == 0 {
-		return nil, errors.New("sbc: invalid payload size")
-	}
-	return decryptBackupPayload(v.seed, []byte(v.mid), key, payload)
 }

@@ -2,57 +2,70 @@ package sbc
 
 import (
 	"errors"
-
 	"github.com/q0jt/line-sbc/sbc/internal/msgpack"
 )
 
-func marshalKeyWrap(certKey, enc []byte) ([]byte, error) {
-	if len(certKey) != 0x40 {
+func marshalKeyWrap(key, enc []byte) ([]byte, error) {
+	if len(key) != 0x40 {
 		return nil, errors.New("sbc/msgpack: invalid public key size")
 	}
 	if size := len(enc); size != 0x10 && size != 0x20 {
-		return nil, errors.New("sbc/msgpack: invalid rng size")
+		return nil, errors.New("sbc/msgpack: invalid encrypted seed size")
 	}
 
 	encoder := msgpack.NewEncoder()
 
 	encoder.WriteArraySize(2)
-	encoder.WriteBinary(certKey)
-	encoder.WriteBinary(enc)
+	if err := encoder.WriteBinary(key); err != nil {
+		return nil, err
+	}
+	if err := encoder.WriteBinary(enc); err != nil {
+		return nil, err
+	}
 
 	return encoder.Buffer(), nil
 }
 
-func marshalClaim(wrapKey, tempKey, pin []byte, timestamp int64) ([]byte, error) {
+func marshalClaim(envelope *keyEnvelope, enc []byte, timestamp uint64) ([]byte, error) {
 	encoder := msgpack.NewEncoder()
 	encoder.WriteArraySize(5)
-	if err := encoder.WriteUint(2); err != nil {
+	if err := encoder.WriteFixUint(2); err != nil {
 		return nil, err
 	}
-	encoder.WriteUint64(uint64(timestamp))
-	encoder.WriteBinary(tempKey)
+	encoder.WriteUint64(timestamp)
+	if err := encoder.WriteBinary(envelope.tempKey); err != nil {
+		return nil, err
+	}
 	encoder.WriteArraySize(1)
-	encoder.WriteDirect(wrapKey)
-	encoder.WriteBinary(pin)
+	encoder.WriteDirect(envelope.wrapKey)
+	if err := encoder.WriteBinary(enc); err != nil {
+		return nil, err
+	}
 	return encoder.Buffer(), nil
 }
 
-func marshalClaimV3(mid, passwd []byte, envelope *keyEnvelope, timestamp int64) ([]byte, error) {
+func marshalClaimV3(envelope *keyEnvelope, mid, enc []byte, ft uint8, timestamp uint64) ([]byte, error) {
 	encoder := msgpack.NewEncoder()
 	encoder.WriteArraySize(7)
-	if err := encoder.WriteUint(3); err != nil {
+	if err := encoder.WriteFixUint(3); err != nil {
 		return nil, err
 	}
-	encoder.WriteBinary(mid)
-	encoder.WriteUint64(uint64(timestamp))
-	encoder.WriteBinary(envelope.tempKey)
+	if err := encoder.WriteBinary(mid); err != nil {
+		return nil, err
+	}
+	encoder.WriteUint64(timestamp)
+	if err := encoder.WriteBinary(envelope.tempKey); err != nil {
+		return nil, err
+	}
 	encoder.WriteArraySize(1)
 	encoder.WriteDirect(envelope.wrapKey)
 	// factorType
-	if err := encoder.WriteUint(1); err != nil {
+	if err := encoder.WriteFixUint(ft); err != nil {
 		return nil, err
 	}
-	encoder.WriteBinary(passwd)
+	if err := encoder.WriteBinary(enc); err != nil {
+		return nil, err
+	}
 	return encoder.Buffer(), nil
 }
 
@@ -70,7 +83,7 @@ func marshalBlobPayloadMetaData(payload *blobPayload) ([]byte, error) {
 
 	for _, keyId := range keyIds {
 		encoder.WriteArraySize(2)
-		if err := encoder.WriteUint(0x01); err != nil {
+		if err := encoder.WriteFixUint(1); err != nil {
 			return nil, err
 		}
 		encoder.WriteUint32(uint32(keyId))
@@ -78,14 +91,14 @@ func marshalBlobPayloadMetaData(payload *blobPayload) ([]byte, error) {
 
 	if payload.meta.has(fieldBackupPin) {
 		encoder.WriteArraySize(1)
-		if err := encoder.WriteUint(2); err != nil {
+		if err := encoder.WriteFixUint(2); err != nil {
 			return nil, err
 		}
 	}
 
 	if payload.meta.has(fieldMasterKey) {
 		encoder.WriteArraySize(2)
-		if err := encoder.WriteUint(0x03); err != nil {
+		if err := encoder.WriteFixUint(3); err != nil {
 			return nil, err
 		}
 		encoder.WriteUint64(payload.timestamp)
@@ -321,9 +334,10 @@ func unmarshalBackupKeySlots(b []byte, f field) (*keySlots, error) {
 }
 
 type backupPayload struct {
-	payloadType uint
+	payloadType PayloadType
 	metaData    []uint64
-	challenge   []byte
+	nonce       []byte
+	publicKey   []byte
 	data        []byte
 }
 
@@ -348,7 +362,8 @@ func unmarshalBackupPayload(b []byte) (*backupPayload, error) {
 	if err != nil {
 		return nil, err
 	}
-	payload.payloadType = pt
+	payloadType := PayloadType(pt)
+	payload.payloadType = payloadType
 	for i := 0; i < 2; i++ {
 		timestamp, err := decoder.ReadUint64()
 		if err != nil {
@@ -356,15 +371,26 @@ func unmarshalBackupPayload(b []byte) (*backupPayload, error) {
 		}
 		payload.metaData = append(payload.metaData, timestamp)
 	}
-	if pt != 1 && pt != 2 {
+	if payloadType != PayloadTypeE2eeKey && payloadType != PayloadTypeInitialFullSyncKey {
 		return nil, ErrUnpackBackupPayload
 	}
-	if pt != 1 {
-		challenge, err := decoder.ReadBinary()
+	nonce, err := decoder.ReadBinary()
+	if err != nil {
+		return nil, err
+	}
+	payload.nonce = nonce
+	if payloadType != PayloadTypeE2eeKey {
+		data, err := decoder.ReadBinary()
 		if err != nil {
 			return nil, err
 		}
-		payload.challenge = challenge
+		payload.data = data
+	} else {
+		pubKey, err := decoder.ReadBinary()
+		if err != nil {
+			return nil, err
+		}
+		payload.publicKey = pubKey
 		data, err := decoder.ReadBinary()
 		if err != nil {
 			return nil, err
