@@ -32,30 +32,33 @@ func (e *Encoder) WriteArraySize(size uint8) {
 	e.buf.WriteByte(0x9<<4 | size)
 }
 
-func (e *Encoder) WriteBinary(b []byte) {
+func (e *Encoder) WriteBinary(b []byte) error {
 	size := len(b)
-	if size < (1<<8)-1 {
+	switch {
+	case size < (1<<8)-1:
 		e.writeByteDirect(0xc4)
 		e.writeByteDirect(byte(size))
-	} else if size < (1<<16)-1 {
+	case size < (1<<16)-1:
 		e.writeByteDirect(0xc5)
 		length := make([]byte, 2)
 		binary.LittleEndian.PutUint16(length, uint16(size))
-		e.WriteDirect(length)
-	} else if size < (1<<32)-1 {
+	case size < (1<<32)-1:
 		e.writeByteDirect(0xc6)
 		length := uint32ToBytes(uint32(size))
 		e.WriteDirect(length)
+	default:
+		return ErrUnpackData
 	}
 	e.WriteDirect(b)
+	return nil
 }
 
-func (e *Encoder) WriteUint(c byte) error {
-	if c&0x80 == 0 {
-		e.writeByteDirect(c)
-		return nil
+func (e *Encoder) WriteFixUint(c byte) error {
+	if c&0x80 != 0 {
+		return ErrPackData
 	}
-	return ErrPackMsgPack
+	e.writeByteDirect(c)
+	return nil
 }
 
 func (e *Encoder) WriteUint32(v uint32) {

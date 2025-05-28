@@ -32,7 +32,7 @@ func (d *Decoder) ReadUint() (uint, error) {
 		return 0, err
 	}
 	if c&0x80 != 0 {
-		return 0, ErrUnpackMsgPack
+		return 0, ErrUnpackData
 	}
 	return uint(c), nil
 }
@@ -76,12 +76,11 @@ func (d *Decoder) ReadBinary() ([]byte, error) {
 	}
 	switch c {
 	case 0xc4:
-		n, err := d.read(1)
+		size, err := d.byte()
 		if err != nil {
 			return nil, err
 		}
-		size := int(n[0])
-		return d.read(size)
+		return d.read(int(size))
 	case 0xc5:
 		n, err := d.read(2)
 		if err != nil {
@@ -90,7 +89,7 @@ func (d *Decoder) ReadBinary() ([]byte, error) {
 		size := binary.BigEndian.Uint16(n)
 		return d.read(int(size))
 	}
-	return nil, ErrUnpackMsgPack
+	return nil, ErrUnpackData
 }
 
 func (d *Decoder) ReadString() (string, error) {
@@ -99,7 +98,7 @@ func (d *Decoder) ReadString() (string, error) {
 		return "", err
 	}
 	if (c>>0x5)&0x07 != 0x5 {
-		return "", ErrUnpackMsgPack
+		return "", ErrUnpackData
 	}
 	size := int(c & 0x1F)
 	str, err := d.read(size)
@@ -112,17 +111,17 @@ func (d *Decoder) ReadString() (string, error) {
 func (d *Decoder) ReadArray() (int, error) {
 	c, err := d.byte()
 	if err != nil {
-		return -1, ErrUnpackMsgPack
+		return -1, ErrUnpackData
 	}
 	if (c & 0xF0) == 0x90 {
 		return int(c & 0x0F), nil
 	}
 	if c != 0xDD && c != 0xDC {
-		return -1, ErrUnpackMsgPack
+		return -1, ErrUnpackData
 	}
 	size, err := d.read(1)
 	if err != nil {
-		return -1, ErrUnpackMsgPack
+		return -1, ErrUnpackData
 	}
 	if c == 0xDD {
 		v := binary.BigEndian.Uint32(size)
