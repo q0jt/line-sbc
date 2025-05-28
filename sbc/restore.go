@@ -24,15 +24,15 @@ func newRestoreClaim(claim, seed []byte) *RestoreClaim {
 // CreateFromPin generates a claim using the user's internal identifier,
 // a 6-digit passcode, and a service certificate.
 func CreateFromPin(mid, passcode, path string) (*RestoreClaim, error) {
-	timestamp := time.Now().UnixMilli()
+	timestamp := uint64(time.Now().UnixMilli())
 	return CreateFromPinWithServerTime(mid, passcode, path, timestamp)
 }
 
-func CreateFromPinWithServerTime(mid, passcode, path string, timestamp int64) (*RestoreClaim, error) {
+func CreateFromPinWithServerTime(mid, passcode, path string, timestamp uint64) (*RestoreClaim, error) {
 	return createFromPin(mid, passcode, path, timestamp, true)
 }
 
-func createFromPin(mid, passcode, path string, timestamp int64, rel bool) (*RestoreClaim, error) {
+func createFromPin(mid, passcode, path string, timestamp uint64, rel bool) (*RestoreClaim, error) {
 	if !validateMid(mid) {
 		return nil, ErrInvalidMid
 	}
@@ -50,35 +50,35 @@ func createFromPin(mid, passcode, path string, timestamp int64, rel bool) (*Rest
 	return makeRestoreClaim(mid, passcode, timestamp, key)
 }
 
-func makeRestoreClaim(mid, passcode string, timestamp int64, pk *ecdh.PublicKey) (*RestoreClaim, error) {
-	rng := randomBytes(0x10)
+func makeRestoreClaim(mid, passcode string, timestamp uint64, pk *ecdh.PublicKey) (*RestoreClaim, error) {
+	seed := randomBytes(0x10)
 
-	envelope, err := wrapBackupECDHKey(pk, rng, "CLAIM_SHARED")
+	envelope, err := wrapBackupECDHKey(pk, seed, "CLAIM_SHARED")
 	if err != nil {
 		return nil, err
 	}
 
-	seed, err := deriveKey(rng, []byte(mid), "CLAIM_SEED", 0x1c)
+	pek, err := deriveKey(seed, []byte(mid), "CLAIM_SEED", 0x1c)
 	if err != nil {
 		return nil, err
 	}
 
-	hashed := hashPasswordArgon2id([]byte(passcode), mid, "ARGON2_PIN")
+	h := hashPasswordArgon2id([]byte(passcode), mid, "ARGON2_PIN")
 
-	aad := make([]byte, 8)
-	binary.BigEndian.PutUint64(aad, uint64(timestamp))
+	aad := make([]byte, 0, 8)
+	aad = binary.BigEndian.AppendUint64(aad, timestamp)
 
-	ciphertext, err := aeadEncrypt(seed[:0x10], seed[0x10:], hashed, aad)
+	enc, err := aeadEncrypt(pek[:0x10], pek[0x10:], h, aad)
 	if err != nil {
 		return nil, err
 	}
 
-	claim, err := marshalClaim(envelope.wrapKey, envelope.tempKey, ciphertext, timestamp)
+	claim, err := marshalClaim(envelope, enc, timestamp)
 	if err != nil {
 		return nil, err
 	}
 
-	return newRestoreClaim(claim, rng), nil
+	return newRestoreClaim(claim, seed), nil
 }
 
 type keyEnvelope struct {
@@ -100,9 +100,9 @@ func wrapBackupECDHKey(pk *ecdh.PublicKey, seed []byte, info string) (*keyEnvelo
 		return nil, err
 	}
 
-	certKey := stripP256PubKeyPrefix(pk.Bytes())
+	serverKey := stripP256PubKeyPrefix(pk.Bytes())
 
-	wrapKey, err := marshalKeyWrap(certKey, ciphertext)
+	wrapKey, err := marshalKeyWrap(serverKey, ciphertext)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +111,7 @@ func wrapBackupECDHKey(pk *ecdh.PublicKey, seed []byte, info string) (*keyEnvelo
 }
 
 func (c *RestoreClaim) Restore(key, payload []byte) (*BackupKeys, error) {
-	if len(c.Seed()) == 0 {
+	if len(c.seed) == 0 {
 		return nil, errors.New("sbc: invalid seed size")
 	}
 	if len(key) == 0 {
@@ -120,7 +120,7 @@ func (c *RestoreClaim) Restore(key, payload []byte) (*BackupKeys, error) {
 	if len(payload) == 0 {
 		return nil, errors.New("sbc: invalid payload size")
 	}
-	return makeRestoreBackupKeys(c.Seed(), key, payload)
+	return makeRestoreBackupKeys(c.seed, key, payload)
 }
 
 func (c *RestoreClaim) Seed() []byte { return c.seed }
