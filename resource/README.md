@@ -13,7 +13,7 @@ thrift --out service --gen go:skip_remote backup.thrift
   - getE2EEKeyBackupCertificates
 
 
-- E2eeKeyBackupCertificateService(`/KBCS`)
+- E2eeKeyBackupCertificateServer(`/KBCS`)
   - getKeyBackupCertificatesV2
 
 

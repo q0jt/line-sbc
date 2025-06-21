@@ -49,12 +49,12 @@ struct E2EEMetadata {
     1: i64 e2EEPublicKeyId;
 }
 
-enum SingleValueMetadataType {
+enum SingleValueType {
     INITIAL_BACKUP_ENCRYPTION_KEY = 0
 }
 
 struct SingleValueMetadata {
-    1: SingleValueMetadataType type;
+    1: SingleValueType type;
 }
 
 struct LifetimePayloadMetaData {
@@ -148,7 +148,7 @@ service E2EEKeyBackupService {
     ) throws(1: E2EEKeyBackupException e);
 }
 
-service E2eeKeyBackupCertificateService {
+service E2eeKeyBackupCertificateServer {
     GetKeyBackupCertificatesV2Response getKeyBackupCertificatesV2(
         2: GetKeyBackupCertificatesV2Request request
     ) throws(1: E2EEKeyBackupException e);
