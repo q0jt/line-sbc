@@ -1,7 +1,7 @@
 ### Build
 ```shell
-mkdir service # any directory
-thrift --out service --gen go:skip_remote backup.thrift
+mkdir /path/to/service
+thrift --out /path/to/service --gen go:skip_remote backup.thrift
 ```
 
 ### Services
@@ -24,7 +24,3 @@ thrift --out service --gen go:skip_remote backup.thrift
   - addLifetimeKeyBackupPayloadDataList
   - updateLifetimeKeyBackupHeader
   - getLifetimeKeyBackupPayloadDataList
-
-> [!NOTE]
-> 
-> Based on Line iOS version 15.0.0 and Android version 15.3.0
