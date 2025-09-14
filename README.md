@@ -1,7 +1,6 @@
 # line-sbc
 LINE-SBC is an implementation based on the reverse engineering of the Secure Backup Client.     
-It consists of client-side encryption (CSE) and the OPAQUE protocol base.   
-go1.24.0 or later is required
+It consists of client-side encryption (CSE) and the OPAQUE protocol base.
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/q0jt/line-sbc.svg)](https://pkg.go.dev/github.com/q0jt/line-sbc)
 
@@ -63,4 +62,11 @@ if err != nil {
 > ```
 > E2EEKeyBackupException({Code:INVALID_PIN Reason:invalid pin ParameterMap:map[failedAttemptCount:2 maxAttemptCount:10]})
 > ```
-> There is an anti-brute force mechanism, and after 10 attempts at the backup PIN, the server will permanently lock the data containing the E2EE key, making it inaccessible.
+> 
+> ```
+> E2EEKeyBackupException({Code:INVALID_PASSWORD Reason:invalid password ParameterMap:map[failedAttemptCount:1 maxAttemptCount:100]})
+> ```
+> 
+> Brute-force protection is enforced by setting AttemptCount based on entropy strength. 
+> When the maximum threshold is reached, the server permanently locks the data containing the E2EE keys, making it inaccessible.
+> 
