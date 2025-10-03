@@ -64,6 +64,7 @@ func importCACert(caType caType, rel bool) ([]byte, error) {
 	}
 
 	var name string
+
 	switch caType {
 	case caTypeSGX:
 		name = "backup.security.linecorp.com.pem"
@@ -81,10 +82,8 @@ func importCACert(caType caType, rel bool) ([]byte, error) {
 			name = "yubihsm.backup-beta.security.linecorp.com.pem"
 		}
 	}
-	return loadX509CACert(name)
-}
 
-func loadX509CACert(name string) ([]byte, error) {
 	path := filepath.Join("certs", name)
+
 	return fs.ReadFile(x509CACerts, path)
 }
