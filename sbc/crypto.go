@@ -26,22 +26,18 @@ func hashPasswordArgon2id(passwd []byte, mid, ad string) []byte {
 		passwd, []byte(mid), []byte(ad), 4, 128*1024, 4, 0x10)
 }
 
-func generateEphemeralKey() (*ecdh.PrivateKey, error) {
-	curve := ecdh.P256()
-	return curve.GenerateKey(rand.Reader)
-}
-
 func generateShardSecret(pk *ecdh.PublicKey) ([]byte, []byte, error) {
-	sk, err := generateEphemeralKey()
+	curve := ecdh.P256()
+	esk, err := curve.GenerateKey(rand.Reader)
 	if err != nil {
 		return nil, nil, err
 	}
-	secret, err := sk.ECDH(pk)
+	secret, err := esk.ECDH(pk)
 	if err != nil {
 		return nil, nil, err
 	}
-	key := stripP256PubKeyPrefix(sk.PublicKey().Bytes())
-	return key, secret, nil
+	epk := stripP256PubKeyPrefix(esk.PublicKey().Bytes())
+	return epk, secret, nil
 }
 
 func stripP256PubKeyPrefix(key []byte) []byte {
