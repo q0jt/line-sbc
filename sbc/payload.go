@@ -34,8 +34,9 @@ func decryptPayloadSecret(masterKey, payload []byte) (*PayloadSecret, error) {
 		return nil, err
 	}
 	// aad: version 2 bytes || payload type 2 bytes || timestamp 1 8 bytes ||
-	// timestamp 2 8 bytes || e2ee public key 32 bytes or 0 bytes
-	aad := make([]byte, 0, 4+len(bp.metaData)*8+len(bp.publicKey))
+	// timestamp 2 8 bytes || e2ee public key 32 bytes(when PayloadTypeE2eeKey)
+	aadSize := 4 + len(bp.metaData)*8 + len(bp.publicKey)
+	aad := make([]byte, 0, aadSize)
 	aad = binary.LittleEndian.AppendUint16(aad, uint16(2))
 	aad = binary.LittleEndian.AppendUint16(aad, uint16(bp.payloadType))
 	for _, t := range bp.metaData {
