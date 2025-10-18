@@ -9,6 +9,7 @@ import (
 	"errors"
 	"io/fs"
 	"path/filepath"
+	"strings"
 
 	"github.com/q0jt/line-sbc/sbc/internal/sum"
 )
@@ -63,25 +64,24 @@ func importCACert(caType caType, rel bool) ([]byte, error) {
 		return nil, err
 	}
 
-	var name string
+	certSuffix := "security.linecorp.com.pem"
+
+	var prefix string
 
 	switch caType {
 	case caTypeSGX:
-		name = "backup.security.linecorp.com.pem"
-		if !rel {
-			name = "backup-beta.security.linecorp.com.pem"
-		}
+		prefix = "backup"
 	case caTypeNitrokey:
-		name = "nitrokey.backup.security.linecorp.com.pem"
-		if !rel {
-			name = "nitrokey.beta.backup.security.linecorp.com.pem"
-		}
+		prefix = "nitrokey.backup"
 	case caTypeYubiHSM:
-		name = "yubihsm.backup.security.linecorp.com.pem"
-		if !rel {
-			name = "yubihsm.backup-beta.security.linecorp.com.pem"
-		}
+		prefix = "yubihsm.backup"
 	}
+
+	if !rel {
+		prefix = prefix + "-" + "beta"
+	}
+
+	name := strings.Join([]string{prefix, certSuffix}, ".")
 
 	path := filepath.Join("certs", name)
 
