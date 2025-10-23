@@ -4,7 +4,6 @@ import (
 	"crypto/ecdh"
 	"encoding/binary"
 	"errors"
-	"os"
 	"time"
 )
 
@@ -74,11 +73,7 @@ func createFromSecretFactor(factor *SecretFactor, timestamp uint64, path string,
 	if !validateMid(factor.mid) {
 		return nil, ErrInvalidMid
 	}
-	cert, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	key, err := importServicePubKeys(cert, caTypeNitrokey, rel)
+	key, err := loadServiceCertificate(path, caTypeNitrokey, rel)
 	if err != nil {
 		return nil, err
 	}

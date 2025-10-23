@@ -8,6 +8,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -25,13 +26,25 @@ const (
 	caTypeYubiHSM
 )
 
+func loadServiceCertificate(name string, caType caType, rel bool) (*ecdh.PublicKey, error) {
+	_, err := os.Stat(name)
+	if err != nil {
+		return nil, err
+	}
+	data, err := os.ReadFile(name)
+	if err != nil {
+		return nil, err
+	}
+	return importServicePubKeys(data, caType, rel)
+}
+
 func importServicePubKeys(data []byte, caType caType, rel bool) (*ecdh.PublicKey, error) {
 	block, _ := pem.Decode(data)
 	cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
 		return nil, err
 	}
-	if err := verifyServiceCert(cert, caType, rel); err != nil {
+	if err := verifyServiceCertificate(cert, caType, rel); err != nil {
 		return nil, errors.New("sbc: invalid cert signature")
 	}
 	if key, ok := cert.PublicKey.(*ecdsa.PublicKey); ok {
@@ -40,7 +53,7 @@ func importServicePubKeys(data []byte, caType caType, rel bool) (*ecdh.PublicKey
 	return nil, errors.New("sbc: internal error while importing service cert")
 }
 
-func verifyServiceCert(cert *x509.Certificate, caType caType, rel bool) error {
+func verifyServiceCertificate(cert *x509.Certificate, caType caType, rel bool) error {
 	roots := x509.NewCertPool()
 	ca, err := importCACert(caType, rel)
 	if err != nil {

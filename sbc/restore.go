@@ -4,7 +4,6 @@ import (
 	"crypto/ecdh"
 	"encoding/binary"
 	"errors"
-	"os"
 	"time"
 )
 
@@ -39,11 +38,7 @@ func createFromPin(mid, passcode, path string, timestamp uint64, rel bool) (*Res
 	if !validatePasscode(passcode) {
 		return nil, ErrInvalidPasscode
 	}
-	cert, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	key, err := importServicePubKeys(cert, caTypeSGX, rel)
+	key, err := loadServiceCertificate(path, caTypeSGX, rel)
 	if err != nil {
 		return nil, err
 	}
