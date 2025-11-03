@@ -61,7 +61,7 @@ func newSecretFactor(mid, credential string, factorType factorType) (*SecretFact
 	return &factor, nil
 }
 
-func (f *SecretFactor) hashCredential() []byte {
+func (f *SecretFactor) hashCredential() ([]byte, error) {
 	info := "V2_ARGON2_PASSWORD"
 	if f.factorType != factorTypePassword {
 		info = "V2_ARGON2_RECOVERY"
@@ -102,7 +102,10 @@ func makeRestoreClaimV3(factor *SecretFactor, timestamp uint64, pk *ecdh.PublicK
 	aad = append(aad, envelope.tempKey...)
 	aad = binary.LittleEndian.AppendUint16(aad, uint16(factor.factorType))
 
-	h := factor.hashCredential()
+	h, err := factor.hashCredential()
+	if err != nil {
+		return nil, err
+	}
 
 	ciphertext, err := aeadEncrypt(cek[:0x10], cek[0x10:], h, aad)
 	if err != nil {

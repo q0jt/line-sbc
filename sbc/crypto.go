@@ -21,7 +21,7 @@ func deriveKey(key, salt []byte, info string, size int) ([]byte, error) {
 	return hkdf.Key(sha256.New, key, salt, info, size)
 }
 
-func hashPasswordArgon2id(passwd []byte, mid, ad string) []byte {
+func hashPasswordArgon2id(passwd []byte, mid, ad string) ([]byte, error) {
 	return argon2.IDKeyWithAssociatedData(
 		passwd, []byte(mid), []byte(ad), 4, 128*1024, 4, 0x10)
 }

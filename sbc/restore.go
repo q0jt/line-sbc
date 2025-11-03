@@ -58,7 +58,10 @@ func makeRestoreClaim(mid, passcode string, timestamp uint64, pk *ecdh.PublicKey
 		return nil, err
 	}
 
-	h := hashPasswordArgon2id([]byte(passcode), mid, "ARGON2_PIN")
+	h, err := hashPasswordArgon2id([]byte(passcode), mid, "ARGON2_PIN")
+	if err != nil {
+		return nil, err
+	}
 
 	aad := make([]byte, 0, 8)
 	aad = binary.BigEndian.AppendUint64(aad, timestamp)
