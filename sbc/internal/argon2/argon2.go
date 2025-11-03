@@ -36,6 +36,7 @@ package argon2
 
 import (
 	"encoding/binary"
+	"errors"
 	"sync"
 
 	"golang.org/x/crypto/blake2b"
@@ -69,7 +70,7 @@ const (
 // adjusted to the number of available CPUs. The cost parameters should be
 // increased as memory latency and CPU parallelism increases. Remember to get a
 // good random salt.
-func Key(password, salt []byte, time, memory uint32, threads uint8, keyLen uint32) []byte {
+func Key(password, salt []byte, time, memory uint32, threads uint8, keyLen uint32) ([]byte, error) {
 	return deriveKey(argon2i, password, salt, nil, nil, time, memory, threads, keyLen)
 }
 
@@ -93,20 +94,20 @@ func Key(password, salt []byte, time, memory uint32, threads uint8, keyLen uint3
 // adjusted to the numbers of available CPUs. The cost parameters should be
 // increased as memory latency and CPU parallelism increases. Remember to get a
 // good random salt.
-func IDKey(password, salt []byte, time, memory uint32, threads uint8, keyLen uint32) []byte {
+func IDKey(password, salt []byte, time, memory uint32, threads uint8, keyLen uint32) ([]byte, error) {
 	return deriveKey(argon2id, password, salt, nil, nil, time, memory, threads, keyLen)
 }
 
-func IDKeyWithAssociatedData(password, salt, ad []byte, time, memory uint32, threads uint8, keyLen uint32) []byte {
+func IDKeyWithAssociatedData(password, salt, ad []byte, time, memory uint32, threads uint8, keyLen uint32) ([]byte, error) {
 	return deriveKey(argon2id, password, salt, nil, ad, time, memory, threads, keyLen)
 }
 
-func deriveKey(mode int, password, salt, secret, data []byte, time, memory uint32, threads uint8, keyLen uint32) []byte {
+func deriveKey(mode int, password, salt, secret, data []byte, time, memory uint32, threads uint8, keyLen uint32) ([]byte, error) {
 	if time < 1 {
-		panic("argon2: number of rounds too small")
+		return nil, errors.New("argon2: number of rounds too small")
 	}
 	if threads < 1 {
-		panic("argon2: parallelism degree too low")
+		return nil, errors.New("argon2: parallelism degree too low")
 	}
 	h0 := initHash(password, salt, secret, data, time, memory, uint32(threads), keyLen, mode)
 
@@ -116,7 +117,8 @@ func deriveKey(mode int, password, salt, secret, data []byte, time, memory uint3
 	}
 	B := initBlocks(&h0, memory, uint32(threads))
 	processBlocks(B, time, memory, uint32(threads), mode)
-	return extractKey(B, memory, uint32(threads), keyLen)
+	key := extractKey(B, memory, uint32(threads), keyLen)
+	return key, nil
 }
 
 const (
