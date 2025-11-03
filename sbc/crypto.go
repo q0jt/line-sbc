@@ -12,9 +12,9 @@ import (
 )
 
 func randomBytes(size int) []byte {
-	rng := make([]byte, size)
-	rand.Read(rng)
-	return rng
+	dst := make([]byte, size)
+	rand.Read(dst)
+	return dst
 }
 
 func deriveKey(key, salt []byte, info string, size int) ([]byte, error) {
