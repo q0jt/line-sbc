@@ -7,6 +7,7 @@ import (
 	"crypto/hkdf"
 	"crypto/rand"
 	"crypto/sha256"
+	"errors"
 
 	"github.com/q0jt/line-sbc/sbc/internal/argon2"
 )
@@ -26,25 +27,32 @@ func hashPasswordArgon2id(passwd []byte, mid, ad string) ([]byte, error) {
 		passwd, []byte(mid), []byte(ad), 4, 128*1024, 4, 0x10)
 }
 
-func generateShardSecret(pk *ecdh.PublicKey) ([]byte, []byte, error) {
+func generateShardSecret(publicKey *ecdh.PublicKey) ([]byte, []byte, error) {
 	curve := ecdh.P256()
 	esk, err := curve.GenerateKey(rand.Reader)
 	if err != nil {
 		return nil, nil, err
 	}
-	secret, err := esk.ECDH(pk)
+	secret, err := esk.ECDH(publicKey)
 	if err != nil {
 		return nil, nil, err
 	}
-	epk := stripP256PubKeyPrefix(esk.PublicKey().Bytes())
+	epk, err := stripP256PubKeyPrefix(esk.PublicKey())
+	if err != nil {
+		return nil, nil, err
+	}
 	return epk, secret, nil
 }
 
-func stripP256PubKeyPrefix(key []byte) []byte {
-	if len(key) != 65 && key[0] != 0x04 {
-		return key
+func stripP256PubKeyPrefix(publicKey *ecdh.PublicKey) ([]byte, error) {
+	if publicKey.Curve() != ecdh.P256() {
+		return nil, errors.New("sbc: invalid curve interface")
 	}
-	return key[1:]
+	pb := publicKey.Bytes()
+	if len(pb) != 65 && pb[0] != 0x04 {
+		return pb, nil
+	}
+	return pb[1:], nil
 }
 
 func aesCTRCrypto(key, iv, src []byte) ([]byte, error) {

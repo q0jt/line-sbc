@@ -98,7 +98,10 @@ func wrapBackupECDHKey(pk *ecdh.PublicKey, seed []byte, info string) (*keyEnvelo
 		return nil, err
 	}
 
-	serverKey := stripP256PubKeyPrefix(pk.Bytes())
+	serverKey, err := stripP256PubKeyPrefix(pk)
+	if err != nil {
+		return nil, err
+	}
 
 	wrapKey, err := marshalKeyWrap(serverKey, ciphertext)
 	if err != nil {
