@@ -31,15 +31,15 @@ func loadServiceCertificate(name string, caType caType, rel bool) (*ecdh.PublicK
 	if err != nil {
 		return nil, err
 	}
-	data, err := os.ReadFile(name)
+	rc, err := os.ReadFile(name)
 	if err != nil {
 		return nil, err
 	}
-	return importServicePubKeys(data, caType, rel)
+	return importServicePubKeys(rc, caType, rel)
 }
 
-func importServicePubKeys(data []byte, caType caType, rel bool) (*ecdh.PublicKey, error) {
-	block, _ := pem.Decode(data)
+func importServicePubKeys(rawCert []byte, caType caType, rel bool) (*ecdh.PublicKey, error) {
+	block, _ := pem.Decode(rawCert)
 	cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
 		return nil, err
@@ -54,11 +54,11 @@ func importServicePubKeys(data []byte, caType caType, rel bool) (*ecdh.PublicKey
 }
 
 func verifyServiceCertificate(cert *x509.Certificate, caType caType, rel bool) error {
-	roots := x509.NewCertPool()
 	ca, err := importCACert(caType, rel)
 	if err != nil {
 		return err
 	}
+	roots := x509.NewCertPool()
 	if ok := roots.AppendCertsFromPEM(ca); !ok {
 		return errors.New("sbc: failed to import root certificate")
 	}
@@ -77,8 +77,6 @@ func importCACert(caType caType, rel bool) ([]byte, error) {
 		return nil, err
 	}
 
-	certSuffix := "security.linecorp.com.pem"
-
 	var prefix string
 
 	switch caType {
@@ -94,8 +92,9 @@ func importCACert(caType caType, rel bool) ([]byte, error) {
 		prefix = prefix + "-" + "beta"
 	}
 
-	name := strings.Join([]string{prefix, certSuffix}, ".")
+	certSuffix := "security.linecorp.com.pem"
 
+	name := strings.Join([]string{prefix, certSuffix}, ".")
 	path := filepath.Join("certs", name)
 
 	return fs.ReadFile(x509CACerts, path)
