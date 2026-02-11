@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/x509"
 	"embed"
+	"encoding/asn1"
 	"encoding/pem"
 	"errors"
 	"io/fs"
@@ -68,6 +69,9 @@ func verifyServiceCertificate(cert *x509.Certificate, caType caType, rel bool) e
 	if _, err := cert.Verify(opts); err != nil {
 		return err
 	}
+	if ok := checkCertificateKeyUsage(cert, x509.KeyUsageKeyAgreement); !ok {
+		return errors.New("sbc: incorrect key usage")
+	}
 	return nil
 }
 
@@ -98,4 +102,21 @@ func importCACert(caType caType, rel bool) ([]byte, error) {
 	path := filepath.Join("certs", name)
 
 	return fs.ReadFile(x509CACerts, path)
+}
+
+func checkCertificateKeyUsage(cert *x509.Certificate, usage x509.KeyUsage) bool {
+	oidKeyUsage := asn1.ObjectIdentifier{2, 5, 29, 15}
+
+	var hasKeyUsage bool
+	for _, ext := range cert.Extensions {
+		if ext.Id.Equal(oidKeyUsage) {
+			hasKeyUsage = true
+			break
+		}
+	}
+	if !hasKeyUsage {
+		return true
+	}
+
+	return cert.KeyUsage&usage == usage
 }
