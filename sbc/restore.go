@@ -124,6 +124,10 @@ func (c *RestoreClaim) Restore(key, payload []byte) (*BackupKeys, error) {
 	return makeRestoreBackupKeys(c.seed, key, payload)
 }
 
-func (c *RestoreClaim) Seed() []byte { return c.seed }
+func (c *RestoreClaim) Seed() []byte {
+	return append([]byte(nil), c.seed...)
+}
 
-func (c *RestoreClaim) Claim() []byte { return c.claim }
+func (c *RestoreClaim) Claim() []byte {
+	return append([]byte(nil), c.claim...)
+}

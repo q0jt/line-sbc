@@ -139,9 +139,9 @@ func (v *RestoreClaimV3) Restore(key, payload []byte) (*PayloadSecret, error) {
 }
 
 func (v *RestoreClaimV3) Seed() []byte {
-	return v.seed
+	return append([]byte(nil), v.seed...)
 }
 
 func (v *RestoreClaimV3) Claim() []byte {
-	return v.claim
+	return append([]byte(nil), v.claim...)
 }
