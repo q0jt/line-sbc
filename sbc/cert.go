@@ -41,6 +41,9 @@ func loadServiceCertificate(name string, caType caType, rel bool) (*ecdh.PublicK
 
 func importServicePubKeys(rawCert []byte, caType caType, rel bool) (*ecdh.PublicKey, error) {
 	block, _ := pem.Decode(rawCert)
+	if block == nil || block.Type != "CERTIFICATE" {
+		return nil, errors.New("sbc: failed to decode PEM block")
+	}
 	cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
 		return nil, err
