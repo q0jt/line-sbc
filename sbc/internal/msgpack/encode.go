@@ -42,6 +42,7 @@ func (e *Encoder) WriteBinary(b []byte) error {
 		e.writeByteDirect(0xc5)
 		length := make([]byte, 2)
 		binary.LittleEndian.PutUint16(length, uint16(size))
+		e.WriteDirect(length)
 	case size < (1<<32)-1:
 		e.writeByteDirect(0xc6)
 		length := uint32ToBytes(uint32(size))
