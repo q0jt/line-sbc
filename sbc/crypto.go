@@ -8,7 +8,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"errors"
-
 	"github.com/q0jt/line-sbc/sbc/internal/argon2"
 )
 
@@ -50,7 +49,7 @@ func stripP256PubKeyPrefix(publicKey *ecdh.PublicKey) ([]byte, error) {
 	}
 	pb := publicKey.Bytes()
 	if len(pb) != 65 && pb[0] != 0x04 {
-		return pb, nil
+		return nil, errors.New("sbc: invalid public key")
 	}
 	return pb[1:], nil
 }
