@@ -76,7 +76,7 @@ func generateBackupKeys(slots *keySlots, ids []int32) (*BackupKeys, error) {
 	keySize := len(slots.e2eeKeys)
 	keys := make(E2eeKeys, 0, keySize)
 
-	for i := 0; i < keySize; i++ {
+	for i := range keySize {
 		var data E2eeKeyData
 		if err := json.Unmarshal(slots.e2eeKeys[i], &data); err != nil {
 			return nil, err
