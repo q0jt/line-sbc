@@ -80,9 +80,14 @@ struct RestoreLifetimeKeyBackupHeaderResponse {
     1: binary recoveryKey;
 }
 
-struct ValidateLifetimeKeyBackupHeaderRequest {
+struct ValidateLifetimeKeyBackupRequest {
     1: i64 masterKeyTimestamp;
     2: optional binary blobHeaderHash;
+    3: optional list<LifetimePayloadMetaData> metadataList;
+}
+
+struct ValidateLifetimeKeyBackupResponse {
+    1: list<LifetimePayloadMetaData> missingMetadataList;
 }
 
 struct AddLifetimeKeyBackupPayloadDataListRequest {
@@ -162,8 +167,8 @@ service E2EELifetimeKeyBackupService {
         2: RestoreLifetimeKeyBackupHeaderRequest request
     ) throws(1: E2EEKeyBackupException e);
 
-    void validateLifetimeKeyBackupHeader(
-        2: ValidateLifetimeKeyBackupHeaderRequest request
+    ValidateLifetimeKeyBackupResponse validateLifetimeKeyBackup(
+        2: ValidateLifetimeKeyBackupRequest request
     ) throws(1: E2EEKeyBackupException e);
 
     AddLifetimeKeyBackupPayloadDataListResponse addLifetimeKeyBackupPayloadDataList(
