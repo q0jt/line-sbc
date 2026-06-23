@@ -20,7 +20,7 @@ thrift --out /path/to/service --gen go:skip_remote backup.thrift
 - E2EELifetimeKeyBackupService(`/LKBS4`)
   - createLifetimeKeyBackup
   - restoreLifetimeKeyBackupHeader
-  - validateLifetimeKeyBackupHeader
+  - validateLifetimeKeyBackup
   - addLifetimeKeyBackupPayloadDataList
   - updateLifetimeKeyBackupHeader
   - getLifetimeKeyBackupPayloadDataList
