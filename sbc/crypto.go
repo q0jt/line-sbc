@@ -48,7 +48,7 @@ func stripP256PubKeyPrefix(publicKey *ecdh.PublicKey) ([]byte, error) {
 		return nil, errors.New("sbc: invalid curve interface")
 	}
 	pb := publicKey.Bytes()
-	if len(pb) != 65 && pb[0] != 0x04 {
+	if len(pb) != 65 || pb[0] != 0x04 {
 		return nil, errors.New("sbc: invalid public key")
 	}
 	return pb[1:], nil
