@@ -23,7 +23,7 @@ var x509CACerts embed.FS
 type caType int
 
 const (
-	caTypeSGX = iota + 1
+	caTypeSGX caType = iota + 1
 	caTypeNitrokey
 	caTypeYubiHSM
 )
