@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/q0jt/line-sbc/sbc/internal/sum"
 )
@@ -26,6 +27,10 @@ const (
 	caTypeNitrokey
 	caTypeYubiHSM
 )
+
+var certSumOnce = sync.OnceValue(func() error {
+	return sum.Verify(x509CACerts, "certs", "certs.sum")
+})
 
 func loadServiceCertificate(name string, caType caType, rel bool) (*ecdh.PublicKey, error) {
 	_, err := os.Stat(name)
@@ -79,8 +84,7 @@ func verifyServiceCertificate(cert *x509.Certificate, caType caType, rel bool) e
 }
 
 func importCACert(caType caType, rel bool) ([]byte, error) {
-	err := sum.Verify(x509CACerts, "certs", "certs.sum")
-	if err != nil {
+	if err := certSumOnce(); err != nil {
 		return nil, err
 	}
 
