@@ -8,6 +8,7 @@ import (
 	"encoding/asn1"
 	"encoding/pem"
 	"errors"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -19,6 +20,8 @@ import (
 
 //go:embed certs/*
 var x509CACerts embed.FS
+
+const maxCertFileSize = 64 << 10
 
 type caType int
 
@@ -33,13 +36,18 @@ var certSumOnce = sync.OnceValue(func() error {
 })
 
 func loadServiceCertificate(name string, caType caType, rel bool) (*ecdh.PublicKey, error) {
-	_, err := os.Stat(name)
+	f, err := os.Open(name)
 	if err != nil {
 		return nil, err
 	}
-	rc, err := os.ReadFile(name)
+	defer f.Close()
+
+	rc, err := io.ReadAll(io.LimitReader(f, maxCertFileSize+1))
 	if err != nil {
 		return nil, err
+	}
+	if len(rc) > maxCertFileSize {
+		return nil, errors.New("sbc: service certificate file is too large")
 	}
 	return importServicePubKeys(rc, caType, rel)
 }
