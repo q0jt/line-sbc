@@ -2,6 +2,7 @@ package sbc
 
 import (
 	"encoding/json"
+	"errors"
 )
 
 type E2eeKeyData struct {
@@ -74,6 +75,10 @@ func decryptRecoveryKey(seed, key []byte) ([]byte, error) {
 
 func generateBackupKeys(slots *keySlots, ids []int32) (*BackupKeys, error) {
 	keySize := len(slots.e2eeKeys)
+	if len(ids) != keySize {
+		return nil, errors.New("sbc: key id count does not match key size")
+	}
+
 	keys := make(E2eeKeys, 0, keySize)
 
 	for i := range keySize {
