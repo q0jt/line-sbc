@@ -18,12 +18,15 @@ const (
 	BackupKeyTypeBackupMasterKey
 )
 
+var (
+	midPattern      = regexp.MustCompile(`^u[0-9a-f]{32}$`)
+	passcodePattern = regexp.MustCompile(`^\d{6}$`)
+)
+
 func validateMid(mid string) bool {
-	re := regexp.MustCompile(`u[0-9a-f]{32}`)
-	return re.MatchString(mid)
+	return midPattern.MatchString(mid)
 }
 
 func validatePasscode(passcode string) bool {
-	re := regexp.MustCompile(`^\d{6}$`)
-	return re.MatchString(passcode)
+	return passcodePattern.MatchString(passcode)
 }
