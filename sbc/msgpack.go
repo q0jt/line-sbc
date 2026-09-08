@@ -233,7 +233,7 @@ func unmarshalBlobPayload(b []byte) (*blobPayload, error) {
 
 	var payload blobPayload
 
-	for i := 0; i < elemSize; i++ {
+	for i := range elemSize {
 		v, err := decoder.ReadArray()
 		if err != nil {
 			return nil, err
@@ -302,7 +302,7 @@ func unmarshalBackupKeySlots(b []byte, f field) (*keySlots, error) {
 		e2eeKeys: make([][]byte, keySize),
 	}
 
-	for i := 0; i < keySize; i++ {
+	for i := range keySize {
 		key, err := decoder.ReadBinary()
 		if err != nil {
 			return nil, err
@@ -364,7 +364,7 @@ func unmarshalBackupPayload(b []byte) (*backupPayload, error) {
 	}
 	payloadType := PayloadType(pt)
 	payload.payloadType = payloadType
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		timestamp, err := decoder.ReadUint64()
 		if err != nil {
 			return nil, err
