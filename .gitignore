@@ -17,10 +17,6 @@
 # Go workspace file
 go.work
 
-.vscode
-
-.DS_Store
-
 # Test certificates
 server-LNSGXTE1505.backup.security.linecorp.com.pem
 node-nitrokey.backup.security.linecorp.com.pem
