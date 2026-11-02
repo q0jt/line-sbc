@@ -57,9 +57,9 @@ struct SingleValueMetadata {
     1: SingleValueType type;
 }
 
-struct LifetimePayloadMetaData {
-    1: optional E2EEMetadata e2ee;
-    2: optional SingleValueMetadata singleValue;
+union LifetimePayloadMetaData {
+    1: E2EEMetadata e2ee;
+    2: SingleValueMetadata singleValue;
 }
 
 struct LifetimePayloadData {
@@ -95,7 +95,7 @@ struct AddLifetimeKeyBackupPayloadDataListRequest {
 }
 
 struct LifetimeBackupFailedPayload {
-    1: LifetimePayloadData metadata;
+    1: LifetimePayloadMetaData metadata;
     2: KeyBackupErrorCode errorCode;
 }
 
