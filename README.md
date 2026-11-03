@@ -1,6 +1,6 @@
 # line-sbc
 LINE-SBC is an implementation based on the reverse engineering of the Secure Backup Client.     
-It consists of client-side encryption (CSE) and the OPAQUE protocol base.
+It consists of client-side encryption (CSE) base.
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/q0jt/line-sbc.svg)](https://pkg.go.dev/github.com/q0jt/line-sbc)
 [![CodeQL](https://github.com/q0jt/line-sbc/actions/workflows/github-code-scanning/codeql/badge.svg?branch=main)](https://github.com/q0jt/line-sbc/actions/workflows/github-code-scanning/codeql)
